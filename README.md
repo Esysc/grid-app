@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# grid-app
-=======
 # Grid Monitor v2.0
 
 ⚡ A production-grade full-stack grid monitoring and analytics platform with JWT authentication, GraphQL API, real-time S3 export, and interactive topology visualization.
@@ -22,7 +19,7 @@ This proof-of-concept showcases a distributed system for monitoring electrical g
 
 ## Architecture
 
-```
+```shell
 ┌─────────────────────────┐      ┌──────────────────────────┐      ┌──────────────────┐
 │  React 18 Frontend      │◄────►│  FastAPI Backend v2.0    │◄────►│   TimescaleDB    │
 │  (Auth + Dashboard)     │      │  (REST + GraphQL + SSE)  │      │  (Time-series)   │
@@ -37,7 +34,7 @@ This proof-of-concept showcases a distributed system for monitoring electrical g
 ## Tech Stack
 
 | Component | Technology | Version | Status |
-|-----------|-----------|---------|--------|
+| --------- | --------- | ------- | ------ |
 | **Backend** | FastAPI | 0.109.0 | ✅ |
 | **Language** | Python | 3.12 | ✅ |
 | **Frontend** | React | 18.2.0 | ✅ |
@@ -77,32 +74,35 @@ docker-compose down
 
 ### Access Points
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Frontend Dashboard | http://localhost:3000 | admin / secret |
-| API Documentation | http://localhost:8000/docs | N/A |
-| GraphQL Playground | http://localhost:8000/graphql | N/A |
-| pgAdmin | http://localhost:5050 | admin@grid-monitor.com / admin |
-| LocalStack S3 | http://localhost:4566 | test / test |
+| Service | URL | Authentication |
+| --------- | ----- | ------------- |
+| Frontend Dashboard | <http://localhost:3000> | See `.env.example` for demo credentials |
+| API Documentation | <http://localhost:8000/docs> | JWT Bearer Token (from login) |
+| GraphQL Playground | <http://localhost:8000/graphql> | JWT Bearer Token (from login) |
+| pgAdmin | <http://localhost:5050> | See `.env.example` for credentials |
+| LocalStack S3 | <http://localhost:4566> | See `.env.example` for credentials |
 
 ## 📊 Features
 
 ### 🔐 Version 2.0 - Enhanced Features
 
 #### JWT Authentication (NEW)
+
 - Secure login endpoint at `/auth/login`
 - OAuth2 password flow
 - Bearer token-based authorization
 - Protected data endpoints
-- Demo credentials: `admin` / `secret`
+- Demo credentials available in `.env.example`
 
 #### GraphQL API (NEW)
+
 - Full GraphQL schema at `/graphql`
 - Type-safe queries for voltage, power quality, faults
 - Strawberry GraphQL integration
 - Interactive playground included
 
 #### S3 Data Export (NEW)
+
 - Export voltage readings as JSON
 - Export fault events as CSV
 - LocalStack S3 integration for testing
@@ -110,6 +110,7 @@ docker-compose down
 - Auto-timestamped exports
 
 #### Grid Topology Visualization (NEW)
+
 - Canvas-based network diagram
 - Substations, transformers, feeders visualization
 - Color-coded node types
@@ -117,6 +118,7 @@ docker-compose down
 - Dynamic rendering
 
 #### Comprehensive Testing (NEW)
+
 - Backend unit tests with pytest
 - React component tests
 - Authentication flow tests
@@ -152,44 +154,51 @@ curl http://localhost:8000/sensors/voltage \
 ## 📈 API Endpoints
 
 ### Authentication
-```
+
+```shell
 POST   /auth/login              Login and get JWT token
 GET    /auth/me                 Get current user profile
 ```
 
 ### Sensors (Requires Auth)
-```
+
+```shell
 GET    /sensors/voltage         Voltage readings (query params: sensor_id, hours)
 GET    /sensors/power-quality   Power quality metrics
 ```
 
 ### Faults (Requires Auth)
-```
+
+```shell
 GET    /faults/recent           Recent fault events (params: hours, severity)
 GET    /faults/timeline         Historical faults (params: start_date, end_date)
 ```
 
 ### Analytics (Requires Auth)
-```
+
+```shell
 GET    /stats                   Dashboard statistics
 GET    /stream/updates          Real-time SSE stream
 ```
 
 ### Export (Requires Auth)
-```
+
+```shell
 POST   /export/voltage          Export voltage data (params: hours)
 POST   /export/faults           Export fault data
 GET    /export/list             List all exported files
 ```
 
 ### GraphQL
-```
+
+```shell
 POST   /graphql                 GraphQL queries
 GET    /graphql                 GraphQL playground
 ```
 
 ### Health & Development
-```
+
+```shell
 GET    /                        API info
 GET    /health                  Health check
 POST   /simulate/populate       Populate test data (dev only)
@@ -264,7 +273,7 @@ pre-commit run --all-files
 
 ## 🗂️ Project Structure
 
-```
+```shell
 grid-app/
 ├── backend/
 │   ├── main.py                  # FastAPI app with auth & GraphQL
@@ -348,24 +357,35 @@ docker-compose down
 
 ### Environment Variables
 
-The application uses environment variables for configuration. For local development, create a `.env` file in the project root:
+The application uses environment variables for configuration. For local development:
 
 ```bash
-# Copy from backend example
-cp backend/.env.example .env
+# Copy the example file
+cp .env.example .env
 
-# Then edit .env and update POSTGRES_PASSWORD
+# Edit .env and configure:
+# - POSTGRES_PASSWORD: Use a strong random password for production
+# - JWT_SECRET_KEY: Use a 32+ character random string for production  
+# - Other secrets: Generate unique values per environment
 ```
 
-Your `.env` should look like this (but with your own secure password):
+**⚠️ IMPORTANT**: Never commit `.env` to version control. The file is in `.gitignore`.
 
-```
-POSTGRES_USER=griduser
-POSTGRES_PASSWORD=grid_power_2024
-POSTGRES_DB=grid_monitoring
+For Docker Compose, ensure these variables are set in your `.env`:
+
+```shell
+# Database
+POSTGRES_USER=<your-db-user>
+POSTGRES_PASSWORD=<your-secure-password>
+POSTGRES_DB=<your-db-name>
 DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB}
-PYTHONUNBUFFERED=1
+
+# Application
+JWT_SECRET_KEY=<your-secure-32-char-key>
+PYTHONUNBUFFERABLE=1
 ```
+
+Refer to `.env.example` for all available configuration options.
 
 ## 📚 Documentation
 
@@ -383,18 +403,21 @@ PYTHONUNBUFFERED=1
 ## ⚙️ Configuration
 
 ### Database
+
 - **Host**: timescaledb:5432
 - **User**: griduser (Configurable via `POSTGRES_USER`)
 - **Password**: Configurable via `POSTGRES_PASSWORD`
 - **Database**: grid_monitoring (Configurable via `POSTGRES_DB`)
 
 ### Authentication
-- **Secret Key**: grid-monitor-secret-key-change-in-production
+
+- **Secret Key**: Configured via `JWT_SECRET_KEY` env variable
 - **Algorithm**: HS256
 - **Token Expiry**: 30 minutes
-- **Demo User**: admin / secret
+- **Demo Credentials**: See `.env.example` file
 
 ### S3 (LocalStack)
+
 - **Endpoint**: http://localhost:4566
 - **Bucket**: grid-monitor-exports
 - **Access Key**: test
@@ -408,4 +431,3 @@ This project is provided as-is for demonstration purposes.
 
 - **v2.0.0** - Added JWT auth, GraphQL, S3 export, topology visualization, tests
 - **v1.0.0** - Initial REST API with real-time monitoring dashboard
->>>>>>> 1631479 (feat(frontend): add React 18 dashboard with JWT auth, real-time charts, and grid topology)
