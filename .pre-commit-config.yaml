@@ -1,0 +1,117 @@
+---
+# Pre-commit hooks configuration
+# Install pre-commit: pip install pre-commit
+# Setup hooks: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^frontend/
+      - id: end-of-file-fixer
+        exclude: ^frontend/
+      - id: check-yaml
+      - id: check-json
+        exclude: ^frontend/
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python: Black code formatter
+  - repo: https://github.com/psf/black
+    rev: 25.12.0
+    hooks:
+      - id: black
+        language_version: python3.10
+        files: ^backend/.*\.py$
+        args: ['--line-length=100']
+
+  # Python: isort import organizer
+  - repo: https://github.com/pycqa/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        files: ^backend/.*\.py$
+        args: ['--profile=black', '--line-length=100']
+
+  # Python: flake8 linter
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        files: ^backend/.*\.py$
+        args: ['--config=backend/.flake8']
+
+  # Python: pylint code analysis
+  - repo: https://github.com/pycqa/pylint
+    rev: v4.0.4
+    hooks:
+      - id: pylint
+        files: ^backend/.*\.py$
+        args:
+          - '--rcfile=backend/.pylintrc'
+          - '--disable=C0114,C0115,C0116'  # Disable docstring warnings for pre-commit
+        additional_dependencies:
+          - fastapi
+          - pydantic
+          - sqlalchemy
+          - asyncpg
+          - uvicorn
+
+  # Python: mypy type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        files: ^backend/.*\.py$
+        args: ['--config-file=backend/mypy.ini', '--ignore-missing-imports']
+        additional_dependencies:
+          - pydantic
+          - types-python-dateutil
+
+  # Security: bandit security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.2
+    hooks:
+      - id: bandit
+        files: ^backend/.*\.py$
+        args: ['-ll', '-i']  # Low severity, ignore import statements
+
+  # Docker: hadolint Dockerfile linter
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker
+        files: Dockerfile
+
+  # YAML: yamllint
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        args: ['-d', '{extends: default, rules: {line-length: {max: 120}}}']
+
+  # Markdown: markdownlint
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.47.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix', '--disable', 'MD013']
+
+# Configuration for specific checks
+exclude: |
+  (?x)^(
+    .*/__pycache__/.*|
+    .*/node_modules/.*|
+    .*/venv/.*|
+    .*/\.venv/.*|
+    .*/build/.*|
+    .*/dist/.*|
+    .*\.egg-info/.*
+  )$
