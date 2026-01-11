@@ -139,9 +139,7 @@ jobs:
 
       - name: Build for production
         working-directory: ./frontend
-        run: npm run build
-        env:
-          PUBLIC_URL: /grid-monitor
+        run: PUBLIC_URL=/grid-app npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
