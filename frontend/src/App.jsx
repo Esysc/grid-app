@@ -293,7 +293,7 @@ function App() {
               Archives
             </button>
           </nav>
-          {isAuthenticated && <DemoDataButton token={accessToken} />}
+          {!DEMO && isAuthenticated && <DemoDataButton token={accessToken} />}
           <ExportMenu token={accessToken} onViewArchives={() => setView('archives')} />
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
