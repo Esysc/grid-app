@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import Archives from './Archives';
 
 describe('Archives', () => {
@@ -10,14 +11,14 @@ describe('Archives', () => {
     global.fetch = vi.fn();
   });
 
-  it('renders archives heading', () => {
+  it('renders archives heading', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ files: [] }),
     });
 
     render(<Archives token={mockToken} />);
-    expect(screen.getByText('📁 Data Archives')).toBeInTheDocument();
+    expect(await screen.findByText('📁 Data Archives')).toBeInTheDocument();
   });
 
   it('displays loading state initially', () => {
@@ -148,7 +149,7 @@ describe('Archives', () => {
     });
 
     const downloadButton = screen.getByText('Download');
-    fireEvent.click(downloadButton);
+    await userEvent.click(downloadButton);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -190,7 +191,7 @@ describe('Archives', () => {
     });
 
     const downloadButton = screen.getByText('Download');
-    fireEvent.click(downloadButton);
+    await userEvent.click(downloadButton);
 
     await waitFor(() => {
       expect(screen.getByText(/Download failed/i)).toBeInTheDocument();

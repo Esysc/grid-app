@@ -2,6 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import './ExportMenu.css';
 
 const ExportMenu = ({ token, onViewArchives }) => {
+  const isPages =
+    typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+  const DEMO =
+    typeof import.meta.env.VITE_DEMO_MODE !== 'undefined'
+      ? import.meta.env.VITE_DEMO_MODE === 'true'
+      : isPages;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -24,6 +30,11 @@ const ExportMenu = ({ token, onViewArchives }) => {
   }, [open]);
 
   const callExport = async (path) => {
+    if (DEMO) {
+      setMessage('Demo mode: simulated export complete');
+      setOpen(false);
+      return;
+    }
     if (!token) {
       setMessage('Login required');
       return;

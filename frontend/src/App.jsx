@@ -8,6 +8,12 @@ import ExportMenu from './components/ExportMenu';
 import Archives from './components/Archives';
 
 function App() {
+  const isPages =
+    typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+  const DEMO =
+    typeof import.meta.env.VITE_DEMO_MODE !== 'undefined'
+      ? import.meta.env.VITE_DEMO_MODE === 'true'
+      : isPages;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +28,12 @@ function App() {
   useEffect(() => {
     // Check if user is already logged in (token in localStorage)
     const savedToken = localStorage.getItem('accessToken');
-    if (savedToken) {
+    if (DEMO) {
+      const demoToken = 'demo-token';
+      setAccessToken(demoToken);
+      setIsAuthenticated(true);
+      startDataFetch(demoToken);
+    } else if (savedToken) {
       setAccessToken(savedToken);
       setIsAuthenticated(true);
       startDataFetch(savedToken);
@@ -40,6 +51,16 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
+      if (DEMO) {
+        const token = 'demo-token';
+        setAccessToken(token);
+        localStorage.setItem('accessToken', token);
+        setIsAuthenticated(true);
+        setUsername('');
+        setPassword('');
+        startDataFetch(token);
+        return;
+      }
       const formData = new FormData();
       formData.append('username', username);
       formData.append('password', password);
@@ -82,6 +103,41 @@ function App() {
   };
 
   const startDataFetch = (token) => {
+    if (DEMO) {
+      // Seed synthetic demo data
+      const now = Date.now();
+      const makeTs = (i) => new Date(now - i * 1000 * 30).toISOString();
+      setVoltageData(
+        Array.from({ length: 30 }, (_, i) => ({
+          timestamp: makeTs(30 - i),
+          voltage_l1: 225 + Math.sin(i / 3) * 3,
+        }))
+      );
+      setPowerQuality(
+        Array.from({ length: 20 }, (_, i) => ({
+          timestamp: makeTs(20 - i),
+          thd_voltage: 2 + Math.cos(i / 4),
+        }))
+      );
+      setRecentFaults([
+        {
+          id: 'FT-001',
+          sensor_id: 'FT-DEMO-1',
+          fault_type: 'overvoltage',
+          severity: 'medium',
+          location: 'Demo Substation',
+          timestamp: new Date(now - 1000 * 60 * 15).toISOString(),
+        },
+      ]);
+      setStats({ total_sensors: 12, total_faults_24h: 1, violations: 0 });
+      // No SSE in demo mode
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      return;
+    }
+
     fetchFaults(token);
     fetchPowerQuality(token);
     fetchVoltage(token);
