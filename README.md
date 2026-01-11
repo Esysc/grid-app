@@ -1,5 +1,8 @@
 # Grid Monitor v2.0
 
+[![GitHub Pages](https://img.shields.io/badge/demo-live-success?logo=github&style=flat-square)](https://esysc.github.io/grid-app/)
+[![Deploy to Pages](https://github.com/Esysc/grid-app/actions/workflows/deploy.yml/badge.svg)](https://github.com/Esysc/grid-app/actions/workflows/deploy.yml)
+
 ⚡ A production-grade full-stack grid monitoring and analytics platform with JWT authentication, GraphQL API, real-time S3 export, and interactive topology visualization.
 
 ## Project Overview
@@ -418,7 +421,7 @@ Refer to `.env.example` for all available configuration options.
 
 ### S3 (LocalStack)
 
-- **Endpoint**: http://localhost:4566
+- **Endpoint**: <http://localhost:4566>
 - **Bucket**: grid-monitor-exports
 - **Access Key**: test
 - **Secret Key**: test
