@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Use '/' for Docker, fallback to '/grid-app/' for GitHub Pages
-const base = process.env.VITE_BASE_URL || '/';
+// Use '/grid-app/' for GitHub Pages, '/' for Docker/local
+const base = process.env.VITE_BASE_URL || (process.env.NODE_ENV === 'production' ? '/grid-app/' : '/');
 
 // https://vitejs.dev/config/
 export default defineConfig({

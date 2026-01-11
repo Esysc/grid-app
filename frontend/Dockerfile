@@ -7,6 +7,8 @@ COPY package*.json ./
 RUN npm ci --ignore-scripts
 
 COPY . .
+# Set base path to '/' for Docker
+ENV VITE_BASE_URL=/
 RUN npm run build
 
 # Production stage
