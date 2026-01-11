@@ -2,11 +2,25 @@ import React, { useEffect, useState } from 'react';
 import './Archives.css';
 
 const Archives = ({ token }) => {
+  const isPages =
+    typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+  const DEMO =
+    typeof import.meta.env.VITE_DEMO_MODE !== 'undefined'
+      ? import.meta.env.VITE_DEMO_MODE === 'true'
+      : isPages;
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const fetchArchives = async () => {
+    if (DEMO) {
+      setError('');
+      setFiles([
+        { key: 'exports/voltage_demo.json', size: 1024, modified: new Date().toISOString() },
+        { key: 'exports/faults_demo.csv', size: 2048, modified: new Date().toISOString() },
+      ]);
+      return;
+    }
     if (!token) {
       setError('Login required');
       return;
@@ -39,6 +53,15 @@ const Archives = ({ token }) => {
   }, [token]);
 
   const downloadFile = async (key) => {
+    if (DEMO) {
+      // In demo mode, just show a placeholder download
+      const blob = new Blob([
+        key.endsWith('.json') ? JSON.stringify({ demo: true }, null, 2) : 'demo,data\n1,2\n',
+      ], { type: key.endsWith('.json') ? 'application/json' : 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      return;
+    }
     if (!token) return;
     try {
       const safeKey = encodeURIComponent(key).replace(/%2F/g, '/');

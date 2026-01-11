@@ -137,7 +137,7 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Build for production
+      - name: Build for production (Pages)
         working-directory: ./frontend
         run: PUBLIC_URL=/grid-app npm run build
 
