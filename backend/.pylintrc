@@ -1,0 +1,55 @@
+[MASTER]
+# Use multiple processes for faster checks
+jobs=1
+
+# Python version for type checking
+py-version=3.10
+
+# List of module names for which import errors should be ignored
+ignored-modules=
+    jose,
+    passlib.context,
+    strawberry,
+    boto3,
+    botocore.client,
+    pytest,
+    mypy_boto3_s3,
+    mypy_boto3_s3.client,
+    sqlalchemy.sql.functions
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable=
+    missing-module-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-locals,
+    too-many-instance-attributes,
+    too-many-branches,
+    too-many-statements,
+    fixme,
+    broad-exception-caught,
+    broad-exception-raised,
+    duplicate-code
+
+[FORMAT]
+# Maximum line length
+max-line-length=100
+
+# String for hanging indentation
+indent-string='    '
+
+[BASIC]
+# Good variable names
+good-names=i,j,k,ex,_,id,db,pq
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=7
+
+# Maximum number of attributes for a class
+max-attributes=10
+
+[IMPORTS]
+# Deprecated modules
+deprecated-modules=
