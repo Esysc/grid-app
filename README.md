@@ -153,7 +153,7 @@ curl http://localhost:8000/sensors/voltage \
 
 ## 📈 API Endpoints
 
-### Authentication
+### JWT Authentication Configuration
 
 ```shell
 POST   /auth/login              Login and get JWT token
@@ -365,7 +365,7 @@ cp .env.example .env
 
 # Edit .env and configure:
 # - POSTGRES_PASSWORD: Use a strong random password for production
-# - JWT_SECRET_KEY: Use a 32+ character random string for production  
+# - JWT_SECRET_KEY: Use a 32+ character random string for production
 # - Other secrets: Generate unique values per environment
 ```
 

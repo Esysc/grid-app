@@ -222,7 +222,7 @@ class TestAccessTokenCreation:
 
     def test_create_access_token_multiple_data_fields(self) -> None:
         """Test token creation with multiple data fields"""
-        data = {"sub": "testuser", "roles": ["admin", "user"]}
+        data: dict[str, Any] = {"sub": "testuser", "roles": ["admin", "user"]}
         token: str = create_access_token(data)
 
         decoded: dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
