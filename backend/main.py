@@ -538,6 +538,7 @@ async def get_export_url(
 async def populate_test_data(
     hours: int = Query(24, ge=1, le=168, description="Hours of data to generate"),
     db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Populate database with test data (development only)"""
     (

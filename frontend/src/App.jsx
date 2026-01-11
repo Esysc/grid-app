@@ -6,6 +6,8 @@ import GridStats from './components/GridStats';
 import GridTopology from './components/GridTopology';
 import ExportMenu from './components/ExportMenu';
 import Archives from './components/Archives';
+import DemoBanner from './components/DemoBanner';
+import DemoDataButton from './components/DemoDataButton';
 
 function App() {
   const isPages =
@@ -270,9 +272,7 @@ function App() {
 
   return (
     <div className="App">
-      <div className="demo-banner">
-        Demo environment – data is synthetic; no live sensors are connected.
-      </div>
+      <DemoBanner isDemo={DEMO} />
       <header className="App-header">
         <div>
           <h1>⚡ Grid Monitor</h1>
@@ -293,6 +293,7 @@ function App() {
               Archives
             </button>
           </nav>
+          {!DEMO && <DemoDataButton token={accessToken} />}
           <ExportMenu token={accessToken} onViewArchives={() => setView('archives')} />
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
