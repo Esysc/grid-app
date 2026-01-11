@@ -20,17 +20,19 @@ class S3Exporter:
         self,
         access_key: str = "test",
         secret_key: str = "test",
-        endpoint_url: str = "http://localhost:4566",
+        endpoint_url: str = "http://localstack:4566",
         region_name: str = "us-east-1",
     ) -> None:
         """Initialize S3 client"""
-        self.s3_client: S3Client = boto3.client(  # pyright: ignore[reportUnknownMemberType]
-            "s3",
-            endpoint_url=endpoint_url,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name=region_name,
-            config=Config(signature_version="s3v4"),
+        self.s3_client: S3Client = (
+            boto3.client(  # pyright: ignore[reportUnknownMemberType, reportGeneralTypeIssues]
+                "s3",
+                endpoint_url=endpoint_url,
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key,
+                region_name=region_name,
+                config=Config(signature_version="s3v4"),
+            )
         )
         self.bucket_name = "grid-monitor-exports"
 
@@ -97,6 +99,20 @@ class S3Exporter:
         timestamp = datetime.now(timezone.utc).isoformat()
         object_name = f"exports/faults_{timestamp}.csv"
         return self.export_to_csv(data, object_name)
+
+    def generate_presigned_url(self, key: str, expires_in: int = 3600) -> dict[str, Any]:
+        """Generate a presigned URL for downloading an export"""
+        try:
+            url = self.s3_client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self.bucket_name, "Key": key},
+                ExpiresIn=expires_in,
+            )
+            # Replace internal Docker endpoint with localhost for browser access
+            url = url.replace("http://localstack:4566", "http://localhost:4566")
+            return {"status": "success", "url": url}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
     def list_exports(self) -> dict[str, Any]:
         """List all exported files"""

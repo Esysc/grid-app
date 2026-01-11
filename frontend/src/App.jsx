@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import PowerQualityChart from './components/PowerQualityChart';
 import FaultTimeline from './components/FaultTimeline';
 import GridStats from './components/GridStats';
 import GridTopology from './components/GridTopology';
+import ExportMenu from './components/ExportMenu';
+import Archives from './components/Archives';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -14,6 +16,8 @@ function App() {
   const [voltageData, setVoltageData] = useState([]);
   const [stats, setStats] = useState({ total_sensors: 0, total_faults_24h: 0, violations: 0 });
   const [accessToken, setAccessToken] = useState(null);
+  const [view, setView] = useState('dashboard');
+  const eventSourceRef = useRef(null);
 
   useEffect(() => {
     // Check if user is already logged in (token in localStorage)
@@ -23,6 +27,14 @@ function App() {
       setIsAuthenticated(true);
       startDataFetch(savedToken);
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
   }, []);
 
   const handleLogin = async (e) => {
@@ -63,38 +75,40 @@ function App() {
     setPowerQuality([]);
     setVoltageData([]);
     setStats({ total_sensors: 0, total_faults_24h: 0, violations: 0 });
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
   };
 
   const startDataFetch = (token) => {
-    // Fetch initial data
     fetchFaults(token);
     fetchPowerQuality(token);
     fetchVoltage(token);
     fetchStats(token);
 
-    // Set up Server-Sent Events for real-time updates
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
     const eventSource = new EventSource('/api/stream');
-    
+    eventSourceRef.current = eventSource;
+
     eventSource.addEventListener('message', (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.voltage) {
-          setVoltageData(prev => [...prev, data.voltage].slice(-30));
+          setVoltageData((prev) => [...prev, data.voltage].slice(-30));
         }
         if (data.power_quality) {
-          setPowerQuality(prev => [...prev, data.power_quality].slice(-20));
+          setPowerQuality((prev) => [...prev, data.power_quality].slice(-20));
         }
         if (data.fault) {
-          setRecentFaults(prev => [data.fault, ...prev].slice(0, 10));
+          setRecentFaults((prev) => [data.fault, ...prev].slice(0, 10));
         }
       } catch (e) {
         console.error('Error parsing SSE data:', e);
       }
     });
-
-    return () => {
-      eventSource.close();
-    };
   };
 
   const fetchFaults = async (token) => {
@@ -200,42 +214,73 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>⚡ Grid Monitor</h1>
-        <p>Grid Monitoring & Analytics Platform</p>
-        <button className="logout-btn" onClick={handleLogout}>Logout</button>
-      </header>
-      
-      <GridStats stats={stats} />
-      <GridTopology />
-      
-      <div className="dashboard-grid">
-        <div className="chart-container">
-          <h2>⚡ Voltage Monitoring</h2>
-          <PowerQualityChart 
-            data={voltageData} 
-            dataKey="voltage_l1"
-            yAxisLabel="Voltage (V)"
-            color="#8884d8"
-          />
-        </div>
-        
-        <div className="chart-container">
-          <h2>📊 Power Quality</h2>
-          <PowerQualityChart 
-            data={powerQuality} 
-            dataKey="thd_voltage"
-            yAxisLabel="THD (%)"
-            color="#82ca9d"
-          />
-        </div>
-        
-        <div className="fault-container">
-          <h2>⚠️ Recent Faults</h2>
-          <FaultTimeline faults={recentFaults} />
-        </div>
+      <div className="demo-banner">
+        Demo environment – data is synthetic; no live sensors are connected.
       </div>
-      
+      <header className="App-header">
+        <div>
+          <h1>⚡ Grid Monitor</h1>
+          <p>Grid Monitoring & Analytics Platform</p>
+        </div>
+        <div className="header-actions">
+          <nav className="nav-tabs">
+            <button
+              className={view === 'dashboard' ? 'active' : ''}
+              onClick={() => setView('dashboard')}
+            >
+              Dashboard
+            </button>
+            <button
+              className={view === 'archives' ? 'active' : ''}
+              onClick={() => setView('archives')}
+            >
+              Archives
+            </button>
+          </nav>
+          <ExportMenu token={accessToken} onViewArchives={() => setView('archives')} />
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
+        </div>
+      </header>
+
+      {view === 'dashboard' && (
+        <>
+          <GridStats stats={stats} />
+          <GridTopology />
+          <div className="dashboard-grid">
+            <div className="chart-container">
+              <h2>⚡ Voltage Monitoring</h2>
+              <PowerQualityChart
+                data={voltageData}
+                dataKey="voltage_l1"
+                yAxisLabel="Voltage (V)"
+                color="#8884d8"
+              />
+            </div>
+
+            <div className="chart-container">
+              <h2>📊 Power Quality</h2>
+              <PowerQualityChart
+                data={powerQuality}
+                dataKey="thd_voltage"
+                yAxisLabel="THD (%)"
+                color="#82ca9d"
+              />
+            </div>
+
+            <div className="fault-container">
+              <h2>⚠️ Recent Faults</h2>
+              <FaultTimeline faults={recentFaults} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {view === 'archives' && (
+        <div className="archives-section">
+          <Archives token={accessToken} />
+        </div>
+      )}
+
       <footer className="App-footer">
         <p>Grid Monitor - Real-time Grid Analytics</p>
       </footer>

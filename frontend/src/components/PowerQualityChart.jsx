@@ -12,6 +12,11 @@ import {
 } from 'recharts';
 
 const PowerQualityChart = ({ data, dataKey, yAxisLabel, color }) => {
+  // Handle empty or undefined data
+  if (!Array.isArray(data)) {
+    return <div>No data available</div>;
+  }
+  
   // Format timestamp for display
   const formatData = data.map(item => ({
     ...item,

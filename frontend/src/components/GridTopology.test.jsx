@@ -12,7 +12,8 @@ describe('GridTopology Component', () => {
 
   test('renders canvas element', () => {
     render(<GridTopology />);
-    const canvas = screen.getByRole('img', { hidden: true });
+    const { container } = render(<GridTopology />);
+    const canvas = container.querySelector('canvas');
     expect(canvas).toBeInTheDocument();
   });
 

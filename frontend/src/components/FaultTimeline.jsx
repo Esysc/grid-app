@@ -25,7 +25,7 @@ const FaultTimeline = ({ faults }) => {
 
   return (
     <div className="fault-timeline">
-      {faults.length === 0 ? (
+      {(!Array.isArray(faults) || faults.length === 0) ? (
         <div className="no-faults">
           <p>✅ No recent faults detected</p>
         </div>
