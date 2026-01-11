@@ -38,9 +38,7 @@
 }
 
 .logout-btn {
-  position: absolute;
-  right: 20px;
-  top: 20px;
+  position: relative;
   padding: 10px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -168,4 +166,46 @@
   .fault-container {
     grid-column: span 1;
   }
+}
+
+.demo-banner {
+  background: #f59e0b1a;
+  color: #fcd34d;
+  padding: 10px 14px;
+  border: 1px solid #f59e0b55;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0 24px;
+  gap: 12px;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-tabs button {
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.nav-tabs button.active {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1 inset;
+}
+
+.archives-section {
+  margin-top: 12px;
 }

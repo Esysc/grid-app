@@ -26,7 +26,7 @@ from database import (
     get_db,
     init_db,
 )
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -53,7 +53,7 @@ generator = GridDataGenerator()
 
 # S3 exporter instance (will use LocalStack in Docker)
 s3_exporter: S3Exporter = S3Exporter(
-    endpoint_url="http://localhost:4566",
+    endpoint_url="http://localstack:4566",
 )
 
 
@@ -67,6 +67,14 @@ async def lifespan(
     print("✅ Database initialized")
     print("✅ GraphQL schema registered")
     print("✅ Authentication enabled")
+
+    # Initialize S3 bucket
+    try:
+        s3_exporter.ensure_bucket_exists()
+        print("✅ S3 bucket initialized")
+    except Exception as e:
+        print(f"⚠️ S3 bucket initialization failed: {e}")
+
     yield
     # Shutdown
     await close_db()
@@ -514,6 +522,16 @@ async def list_exports(
 ) -> Dict[str, Any]:
     """List all exported files"""
     return s3_exporter.list_exports()
+
+
+@app.get("/export/{file_key:path}", tags=["Export"])
+async def get_export_url(
+    file_key: str = Path(..., description="Key of the export file in S3"),
+    expires_in: int = Query(3600, ge=60, le=86400, description="Presigned URL lifetime (seconds)"),
+    _current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Generate a presigned URL to download an export file"""
+    return s3_exporter.generate_presigned_url(key=file_key, expires_in=expires_in)
 
 
 @app.post("/simulate/populate", tags=["Development"])
