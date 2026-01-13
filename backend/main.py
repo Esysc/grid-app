@@ -353,7 +353,7 @@ async def get_sensor_status(
     for reading in voltage_readings:
         if reading.sensor_id not in processed_sensors:
             seconds_since = int((now - reading.timestamp).total_seconds())
-            status = SensorStatus(
+            sensor_status_obj = SensorStatus(
                 sensor_id=reading.sensor_id,
                 sensor_type="voltage",
                 location=reading.location,
@@ -362,7 +362,7 @@ async def get_sensor_status(
                 seconds_since_update=seconds_since,
                 latest_value=reading.voltage_l1,
             )
-            sensor_statuses.append(status)
+            sensor_statuses.append(sensor_status_obj)
             processed_sensors.add(reading.sensor_id)
 
     # Get latest power quality readings for each sensor
@@ -377,7 +377,7 @@ async def get_sensor_status(
     for reading in pq_readings:
         if reading.sensor_id not in processed_sensors:
             seconds_since = int((now - reading.timestamp).total_seconds())
-            status = SensorStatus(
+            sensor_status_pq = SensorStatus(
                 sensor_id=reading.sensor_id,
                 sensor_type="power_quality",
                 location=reading.location,
@@ -386,7 +386,7 @@ async def get_sensor_status(
                 seconds_since_update=seconds_since,
                 latest_value=reading.power_factor,
             )
-            sensor_statuses.append(status)
+            sensor_statuses.append(sensor_status_pq)
             processed_sensors.add(reading.sensor_id)
 
     return sorted(sensor_statuses, key=lambda x: x.sensor_id)
@@ -543,15 +543,18 @@ async def stream_updates(
     token: str = Query(..., description="JWT token for authentication"),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """Server-Sent Events endpoint for real-time updates (token via query string for EventSource compatibility)"""
+    """SSE endpoint for real-time updates (token via query string).
+
+    Token authentication passed as query parameter for EventSource compatibility.
+    """
     # Validate token
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str | None = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="Invalid token") from exc
 
     # Touch dependency to satisfy linting
     _ = db

@@ -3,7 +3,13 @@ MQTT Consumer for Grid Monitoring - Listens to sensor data and stores it in the 
 
 This consumer runs as a background task in the FastAPI application and listens
 to MQTT topics where sensors publish their data.
+
+Note: Database imports (VoltageReadingDB, PowerQualityDB) are done at function level
+to avoid circular import issues, as database.py depends on models.py which may be
+imported by other modules that reference mqtt_consumer.
 """
+
+# flake8: noqa: F824 (false positive on global assignment)
 
 import asyncio
 import json
@@ -11,7 +17,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-import aiomqtt
+import aiomqtt  # pylint: disable=import-error
 from database import get_db
 from models import PowerQualityMetrics, VoltageReading
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +50,8 @@ class MQTTConsumer:
             )
 
             # Store in database
-            from database import VoltageReadingDB
+            # Import at function level to avoid circular imports (see module docstring)
+            from database import VoltageReadingDB  # pylint: disable=import-outside-toplevel
 
             db_reading = VoltageReadingDB(
                 sensor_id=reading.sensor_id,
@@ -89,7 +96,8 @@ class MQTTConsumer:
             )
 
             # Store in database
-            from database import PowerQualityDB
+            # Import at function level to avoid circular imports (see module docstring)
+            from database import PowerQualityDB  # pylint: disable=import-outside-toplevel
 
             db_metrics = PowerQualityDB(
                 sensor_id=metrics.sensor_id,
@@ -114,22 +122,22 @@ class MQTTConsumer:
             print(f"❌ Error processing power quality: {e}")
             await session.rollback()
 
-    async def consume_messages(self) -> None:
-        """Main consumer loop - listen to MQTT topics and process messages"""
+    async def consume_messages(self) -> None:  # pylint: disable=too-many-branches
+        """Main consumer loop - listen to MQTT topics and process messages."""
         broker_url = self.mqtt_broker.replace("mqtt://", "")
 
         # Split hostname and port
         if ":" in broker_url:
-            hostname, port = broker_url.split(":", 1)
-            port = int(port)
+            hostname, port_str = broker_url.split(":", 1)
+            port_num: int = int(port_str)
         else:
             hostname = broker_url
-            port = 1883  # Default MQTT port
+            port_num = 1883  # Default MQTT port
 
-        print(f"🎧 MQTT Consumer starting, connecting to {hostname}:{port}")
+        print(f"🎧 MQTT Consumer starting, connecting to {hostname}:{port_num}")
 
         try:
-            async with aiomqtt.Client(hostname=hostname, port=port) as client:
+            async with aiomqtt.Client(hostname=hostname, port=port_num) as client:
                 # Subscribe to all sensor topics
                 await client.subscribe("grid/sensors/#")
                 print("✅ Subscribed to grid/sensors/#")
@@ -184,23 +192,21 @@ class MQTTConsumer:
 
 
 # Global consumer instance
-mqtt_consumer: MQTTConsumer | None = None
+_mqtt_consumer: "MQTTConsumer | None" = None  # pylint: disable=invalid-name
 
 
 async def start_mqtt_consumer() -> None:
-    """Start the MQTT consumer as a background task"""
-    global mqtt_consumer
+    """Start the MQTT consumer as a background task."""
+    global _mqtt_consumer  # pylint: disable=global-statement
 
     mqtt_broker = os.getenv("MQTT_BROKER", "mqtt://mqtt:1883")
-    mqtt_consumer = MQTTConsumer(mqtt_broker)
+    _mqtt_consumer = MQTTConsumer(mqtt_broker)
 
     print("🚀 Starting MQTT consumer...")
-    await mqtt_consumer.start()
+    await _mqtt_consumer.start()
 
 
 async def stop_mqtt_consumer() -> None:
-    """Stop the MQTT consumer"""
-    global mqtt_consumer
-
-    if mqtt_consumer:
-        await mqtt_consumer.stop()
+    """Stop the MQTT consumer."""
+    if _mqtt_consumer:
+        await _mqtt_consumer.stop()

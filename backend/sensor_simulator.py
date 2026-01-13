@@ -15,7 +15,7 @@ import random
 from enum import Enum
 from typing import Any, Dict
 
-import aiomqtt
+import aiomqtt  # pylint: disable=import-error
 from data_generator import GridDataGenerator
 
 
@@ -62,12 +62,12 @@ class VirtualSensor:
                 print(f"🟢 {self.sensor_id} returned to OPERATIONAL state")
 
     def generate_reading(self) -> Dict[str, Any]:
-        """Generate sensor reading based on current state"""
+        """Generate sensor reading based on current state."""
         if self.sensor_type == "voltage":
             reading = self.generator.generate_voltage_reading(
                 sensor_id=self.sensor_id, location=self.location
             )
-            data: Dict[str, Any] = {
+            voltage_data: Dict[str, Any] = {
                 "sensor_id": reading.sensor_id,
                 "location": reading.location,
                 "timestamp": reading.timestamp.isoformat(),
@@ -80,59 +80,61 @@ class VirtualSensor:
             # Modify based on state
             if self.state == SensorState.FAULTY:
                 # Inject severe anomalies
-                data["voltage_l1"] *= random.uniform(0.7, 1.4)  # ±30% variation
-                data["voltage_l2"] *= random.uniform(0.7, 1.4)
-                data["voltage_l3"] *= random.uniform(0.7, 1.4)
-                data["frequency"] += random.uniform(-2, 2)  # Large frequency deviation
-                data["state"] = "faulty"
+                voltage_data["voltage_l1"] *= random.uniform(0.7, 1.4)  # ±30% variation
+                voltage_data["voltage_l2"] *= random.uniform(0.7, 1.4)
+                voltage_data["voltage_l3"] *= random.uniform(0.7, 1.4)
+                voltage_data["frequency"] += random.uniform(-2, 2)  # Large frequency deviation
+                voltage_data["state"] = "faulty"
 
             elif self.state == SensorState.RECOVERING:
                 # Moderate anomalies, improving
-                data["voltage_l1"] *= random.uniform(0.9, 1.1)  # ±10% variation
-                data["voltage_l2"] *= random.uniform(0.9, 1.1)
-                data["voltage_l3"] *= random.uniform(0.9, 1.1)
-                data["frequency"] += random.uniform(-0.5, 0.5)
-                data["state"] = "recovering"
+                voltage_data["voltage_l1"] *= random.uniform(0.9, 1.1)  # ±10% variation
+                voltage_data["voltage_l2"] *= random.uniform(0.9, 1.1)
+                voltage_data["voltage_l3"] *= random.uniform(0.9, 1.1)
+                voltage_data["frequency"] += random.uniform(-0.5, 0.5)
+                voltage_data["state"] = "recovering"
             else:
-                data["state"] = "operational"
+                voltage_data["state"] = "operational"
 
-        else:  # power_quality
-            reading = self.generator.generate_power_quality(
-                sensor_id=self.sensor_id, location=self.location
-            )
-            data: Dict[str, Any] = {
-                "sensor_id": reading.sensor_id,
-                "location": reading.location,
-                "timestamp": reading.timestamp.isoformat(),
-                "thd_voltage": reading.thd_voltage,
-                "thd_current": reading.thd_current,
-                "power_factor": reading.power_factor,
-                "voltage_imbalance": reading.voltage_imbalance,
-                "flicker_severity": reading.flicker_severity,
-            }
+            return voltage_data
 
-            # Modify based on state
-            if self.state == SensorState.FAULTY:
-                # Severe power quality issues
-                data["thd_voltage"] *= random.uniform(2.0, 3.0)
-                data["thd_current"] *= random.uniform(2.0, 3.0)
-                data["power_factor"] *= random.uniform(0.7, 0.85)
-                data["voltage_imbalance"] *= random.uniform(3.0, 5.0)
-                data["flicker_severity"] *= random.uniform(2.0, 4.0)
-                data["state"] = "faulty"
+        # power_quality sensor type
+        pq_reading = self.generator.generate_power_quality(
+            sensor_id=self.sensor_id, location=self.location
+        )
+        pq_data: Dict[str, Any] = {
+            "sensor_id": pq_reading.sensor_id,
+            "location": pq_reading.location,
+            "timestamp": pq_reading.timestamp.isoformat(),
+            "thd_voltage": pq_reading.thd_voltage,
+            "thd_current": pq_reading.thd_current,
+            "power_factor": pq_reading.power_factor,
+            "voltage_imbalance": pq_reading.voltage_imbalance,
+            "flicker_severity": pq_reading.flicker_severity,
+        }
 
-            elif self.state == SensorState.RECOVERING:
-                # Moderate issues, improving
-                data["thd_voltage"] *= random.uniform(1.2, 1.5)
-                data["thd_current"] *= random.uniform(1.2, 1.5)
-                data["power_factor"] *= random.uniform(0.85, 0.92)
-                data["voltage_imbalance"] *= random.uniform(1.5, 2.5)
-                data["flicker_severity"] *= random.uniform(1.2, 2.0)
-                data["state"] = "recovering"
-            else:
-                data["state"] = "operational"
+        # Modify based on state
+        if self.state == SensorState.FAULTY:
+            # Severe power quality issues
+            pq_data["thd_voltage"] *= random.uniform(2.0, 3.0)
+            pq_data["thd_current"] *= random.uniform(2.0, 3.0)
+            pq_data["power_factor"] *= random.uniform(0.7, 0.85)
+            pq_data["voltage_imbalance"] *= random.uniform(3.0, 5.0)
+            pq_data["flicker_severity"] *= random.uniform(2.0, 4.0)
+            pq_data["state"] = "faulty"
 
-        return data
+        elif self.state == SensorState.RECOVERING:
+            # Moderate issues, improving
+            pq_data["thd_voltage"] *= random.uniform(1.2, 1.5)
+            pq_data["thd_current"] *= random.uniform(1.2, 1.5)
+            pq_data["power_factor"] *= random.uniform(0.85, 0.92)
+            pq_data["voltage_imbalance"] *= random.uniform(1.5, 2.5)
+            pq_data["flicker_severity"] *= random.uniform(1.2, 2.0)
+            pq_data["state"] = "recovering"
+        else:
+            pq_data["state"] = "operational"
+
+        return pq_data
 
 
 class SensorSimulator:
@@ -196,11 +198,11 @@ class SensorSimulator:
 
         # Split hostname and port
         if ":" in broker_url:
-            hostname, port = broker_url.split(":", 1)
-            port = int(port)
+            hostname, port_str = broker_url.split(":", 1)
+            port_num: int = int(port_str)
         else:
             hostname = broker_url
-            port = 1883  # Default MQTT port
+            port_num = 1883  # Default MQTT port
 
         # Retry connection with exponential backoff
         retry_delay = 2
@@ -208,9 +210,9 @@ class SensorSimulator:
 
         while self.running:
             try:
-                print(f"🔍 Attempting connection to: {hostname}:{port}")
-                async with aiomqtt.Client(hostname=hostname, port=port) as client:
-                    print(f"✅ Connected to MQTT broker")
+                print(f"🔍 Attempting connection to: {hostname}:{port_num}")
+                async with aiomqtt.Client(hostname=hostname, port=port_num) as client:
+                    print("✅ Connected to MQTT broker")
                     retry_delay = 2  # Reset retry delay on successful connection
                     await self.publish_sensor_data(client)
             except KeyboardInterrupt:
