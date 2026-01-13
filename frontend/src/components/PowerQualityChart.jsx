@@ -17,8 +17,9 @@ const PowerQualityChart = ({ data, dataKey, yAxisLabel, color }) => {
     return <div>No data available</div>;
   }
   
-  // Keep only last 30 data points to avoid axis jitter
-  const recentData = data.slice(-30);
+  // Sort data by timestamp ascending (oldest to newest) and keep last 30 points
+  const sortedData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const recentData = sortedData.slice(-30);
   
   // Format timestamp for display - use fixed time format to avoid re-renders
   const formatData = React.useMemo(() => 

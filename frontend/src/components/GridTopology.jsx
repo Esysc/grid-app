@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import './GridTopology.css';
 
 const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
   const [selectedSensor, setSelectedSensor] = useState(null);
 
-  // Map sensor locations to grid nodes with coordinates
-  const nodes = [
-    { id: 'main-hub', x: 250, y: 80, label: 'Main Hub', type: 'hub' },
-    { id: 'substation-1', x: 80, y: 40, label: 'Substation A', type: 'substation', sensorType: 'voltage' },
-    { id: 'substation-2', x: 420, y: 40, label: 'Substation B', type: 'substation', sensorType: 'voltage' },
-    { id: 'transformer-1', x: 40, y: 200, label: 'Transformer 1', type: 'transformer' },
-    { id: 'transformer-2', x: 460, y: 200, label: 'Transformer 2', type: 'transformer' },
-    { id: 'feeder-1', x: 40, y: 300, label: 'Feeder 1', type: 'feeder' },
-    { id: 'feeder-2', x: 250, y: 300, label: 'Feeder 3B', type: 'feeder', sensorType: 'voltage' },
-    { id: 'feeder-3', x: 460, y: 300, label: 'Feeder 5A', type: 'feeder', sensorType: 'voltage' },
-  ];
+  // Known layout coordinates for key locations
+  const baseLayout = {
+    'Main Hub': { id: 'main-hub', x: 250, y: 80, label: 'Main Hub', type: 'hub' },
+    'Substation A': { id: 'substation-1', x: 80, y: 40, label: 'Substation A', type: 'substation', sensorType: 'voltage' },
+    'Substation B': { id: 'substation-2', x: 420, y: 40, label: 'Substation B', type: 'substation', sensorType: 'voltage' },
+    'Transformer 1': { id: 'transformer-1', x: 40, y: 200, label: 'Transformer 1', type: 'transformer', sensorType: 'power_quality' },
+    'Transformer 2': { id: 'transformer-2', x: 460, y: 200, label: 'Transformer 2', type: 'transformer', sensorType: 'power_quality' },
+    'Feeder 1': { id: 'feeder-1', x: 40, y: 300, label: 'Feeder 1', type: 'feeder', sensorType: 'power_quality' },
+    'Feeder 3B': { id: 'feeder-2', x: 250, y: 300, label: 'Feeder 3B', type: 'feeder', sensorType: 'voltage' },
+    'Feeder 5A': { id: 'feeder-3', x: 460, y: 300, label: 'Feeder 5A', type: 'feeder', sensorType: 'voltage' },
+  };
 
-  const connections = [
+  const baseConnections = [
     { from: 'substation-1', to: 'main-hub' },
     { from: 'substation-2', to: 'main-hub' },
     { from: 'main-hub', to: 'transformer-1' },
@@ -27,9 +27,82 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
     { from: 'transformer-2', to: 'feeder-3' },
   ];
 
+  // Build nodes dynamically from sensor locations; auto-place unknown locations around a circle
+  const nodes = useMemo(() => {
+    const uniqueLocations = Array.from(new Set(sensorStatus.map((s) => s.location)));
+
+    // Always include Main Hub even if not present in sensor list
+    const dynamicNodes = [baseLayout['Main Hub']];
+
+    const unknownLocations = [];
+
+    uniqueLocations.forEach((location) => {
+      if (location === 'Main Hub') return; // already added
+
+      // Derive preferred sensorType from sensors at this location
+      const sensorsHere = sensorStatus.filter((s) => s.location === location);
+      const hasVoltage = sensorsHere.some((s) => s.sensor_id.startsWith('VS-'));
+      const hasPQ = sensorsHere.some((s) => s.sensor_id.startsWith('PQ-'));
+      const preferredType = hasVoltage ? 'voltage' : hasPQ ? 'power_quality' : undefined;
+
+      const known = baseLayout[location];
+      if (known) {
+        dynamicNodes.push({ ...known, sensorType: preferredType || known.sensorType });
+      } else {
+        unknownLocations.push({ location, preferredType });
+      }
+    });
+
+    // Auto-place unknown locations in a ring around the hub
+    const centerX = 250;
+    const centerY = 180;
+    const radius = 160;
+    unknownLocations.forEach((node, index) => {
+      const angle = (2 * Math.PI * index) / Math.max(unknownLocations.length, 1);
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      dynamicNodes.push({
+        id: `auto-${index}`,
+        x,
+        y,
+        label: node.location,
+        type: 'feeder',
+        sensorType: node.preferredType,
+      });
+    });
+
+    return dynamicNodes;
+  }, [sensorStatus]);
+
+  // Connections include base ones that exist plus default hub links for auto nodes
+  const connections = useMemo(() => {
+    const nodeIds = new Set(nodes.map((n) => n.id));
+    const filteredBase = baseConnections.filter((c) => nodeIds.has(c.from) && nodeIds.has(c.to));
+
+    const autoLinks = nodes
+      .filter((n) => n.id.startsWith('auto-'))
+      .map((n) => ({ from: n.id, to: 'main-hub' }));
+
+    return [...filteredBase, ...autoLinks];
+  }, [nodes]);
+
   // Get sensor for a node
-  const getSensorForNode = (nodeLabel) => {
-    return sensorStatus.find((sensor) => sensor.location === nodeLabel);
+  const getSensorForNode = (nodeLabel, preferredType) => {
+    const sensorsAtLocation = sensorStatus.filter((sensor) => sensor.location === nodeLabel);
+    if (sensorsAtLocation.length === 0) return null;
+    
+    // If we have a preferred type (voltage/power_quality), find matching sensor
+    if (preferredType) {
+      const preferred = sensorsAtLocation.find(s => {
+        if (preferredType === 'voltage') return s.sensor_id.startsWith('VS-');
+        if (preferredType === 'power_quality') return s.sensor_id.startsWith('PQ-');
+        return false;
+      });
+      if (preferred) return preferred;
+    }
+    
+    // Otherwise return first sensor at this location
+    return sensorsAtLocation[0];
   };
 
   // Get voltage value for sensor
@@ -40,7 +113,7 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
 
   // Determine node styling
   const getNodeColor = (node) => {
-    const sensor = getSensorForNode(node.label);
+    const sensor = getSensorForNode(node.label, node.sensorType);
     if (node.type === 'hub') return '#ff6b6b';
     if (node.type === 'transformer') return '#ffd700';
     if (sensor) {
@@ -50,14 +123,14 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
   };
 
   const getNodeBorder = (node) => {
-    const sensor = getSensorForNode(node.label);
+    const sensor = getSensorForNode(node.label, node.sensorType);
     if (sensor && !sensor.is_operational) return '#ff5252';
     return '#ffffff';
   };
 
   // SVG node component
   const SVGNode = ({ node }) => {
-    const sensor = getSensorForNode(node.label);
+    const sensor = getSensorForNode(node.label, node.sensorType);
     const voltage = sensor ? getVoltageForSensor(sensor.sensor_id) : null;
     const isFaulty = sensor && !sensor.is_operational;
 
