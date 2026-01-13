@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import './GridTopology.css';
 
 const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
-  const [selectedSensor, setSelectedSensor] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedSensorIndex, setSelectedSensorIndex] = useState(0);
 
   // Known layout coordinates for key locations
   const baseLayout = {
@@ -128,7 +129,12 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
       <g
         key={node.id}
         className={`svg-node ${isFaulty ? 'faulty-pulse' : ''}`}
-        onClick={() => sensors.length > 0 && setSelectedSensor(selectPreferredSensor(sensors))}
+        onClick={() => {
+          if (sensors.length > 0) {
+            setSelectedNode(node);
+            setSelectedSensorIndex(0);
+          }
+        }}
         style={{ cursor: sensors.length > 0 ? 'pointer' : 'default' }}
       >
         {/* Connection lines will be drawn separately */}
@@ -254,96 +260,93 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
         </p>
       </div>
 
-      {/* Sensor list sidebar */}
-      <div className="sensor-list-sidebar">
-        <h3>📊 Active Sensors</h3>
-        <div className="sensor-list">
-          {sensorStatus.length === 0 ? (
-            <p className="no-sensors">No sensors available</p>
-          ) : (
-            sensorStatus.map((sensor) => {
-              const voltage = getVoltageForSensor(sensor.sensor_id);
+      {/* Sensor detail modal */}
+      {selectedNode && (
+        <div className="modal-overlay" onClick={() => setSelectedNode(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setSelectedNode(null)}>
+              ✕
+            </button>
+            <h3>Sensors at {selectedNode.label}</h3>
+            {(() => {
+              const sensorsAtNode = getSensorsForNode(selectedNode.label);
+              const selectedSensor = sensorsAtNode[selectedSensorIndex];
+              if (!selectedSensor) return null;
+
               return (
-                <div
-                  key={sensor.sensor_id}
-                  className={`sensor-item ${!sensor.is_operational ? 'faulty' : ''} ${
-                    selectedSensor?.sensor_id === sensor.sensor_id ? 'selected' : ''
-                  }`}
-                  onClick={() => setSelectedSensor(sensor)}
-                >
-                  <div className="sensor-header">
-                    <span className="sensor-status-dot" style={{
-                      backgroundColor: sensor.is_operational ? '#4caf50' : '#ff5252',
-                    }}></span>
-                    <span className="sensor-id">{sensor.sensor_id}</span>
-                  </div>
-                  <div className="sensor-details">
-                    <div className="sensor-location">{sensor.location}</div>
-                    {voltage && (
-                      <div className="sensor-reading">
-                        <strong>V:</strong> {voltage}V
-                      </div>
-                    )}
-                    <div className="sensor-time">
-                      {sensor.seconds_since_update}s ago
+                <div className="modal-body">
+                  {/* Sensor selector tabs */}
+                  {sensorsAtNode.length > 1 && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '16px',
+                      borderBottom: '1px solid #334155',
+                      paddingBottom: '12px',
+                    }}>
+                      {sensorsAtNode.map((sensor, idx) => (
+                        <button
+                          key={sensor.sensor_id}
+                          onClick={() => setSelectedSensorIndex(idx)}
+                          style={{
+                            padding: '8px 12px',
+                            background: idx === selectedSensorIndex ? '#667eea' : '#334155',
+                            color: '#e2e8f0',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: idx === selectedSensorIndex ? 'bold' : 'normal',
+                          }}
+                        >
+                          {sensor.sensor_id}
+                        </button>
+                      ))}
                     </div>
+                  )}
+
+                  <div className="detail-section">
+                    <strong>Sensor ID:</strong> {selectedSensor.sensor_id}
+                  </div>
+                  <div className="detail-section">
+                    <strong>Location:</strong> {selectedSensor.location}
+                  </div>
+                  <div className="detail-section">
+                    <strong>Status:</strong>{' '}
+                    <span
+                      style={{
+                        color: selectedSensor.is_operational ? '#4caf50' : '#ff5252',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {selectedSensor.is_operational ? '✅ Operational' : '❌ Faulty'}
+                    </span>
+                  </div>
+                  {selectedSensor.sensor_id.startsWith('VS-') && (() => {
+                    const voltage = voltageData.find((v) => v.sensor_id === selectedSensor.sensor_id);
+                    return voltage ? (
+                      <>
+                        <div className="detail-section">
+                          <strong>Voltage L1:</strong> {(voltage.voltage_l1 || 0).toFixed(2)}V
+                        </div>
+                        <div className="detail-section">
+                          <strong>Voltage L2:</strong> {(voltage.voltage_l2 || 0).toFixed(2)}V
+                        </div>
+                        <div className="detail-section">
+                          <strong>Voltage L3:</strong> {(voltage.voltage_l3 || 0).toFixed(2)}V
+                        </div>
+                        <div className="detail-section">
+                          <strong>Frequency:</strong> {(voltage.frequency || 0).toFixed(2)} Hz
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
+                  <div className="detail-section">
+                    <strong>Last Update:</strong> {selectedSensor.seconds_since_update}s ago
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Sensor detail modal */}
-      {selectedSensor && (
-        <div className="modal-overlay" onClick={() => setSelectedSensor(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setSelectedSensor(null)}>
-              ✕
-            </button>
-            <h3>Sensor Details</h3>
-            <div className="modal-body">
-              <div className="detail-section">
-                <strong>Sensor ID:</strong> {selectedSensor.sensor_id}
-              </div>
-              <div className="detail-section">
-                <strong>Location:</strong> {selectedSensor.location}
-              </div>
-              <div className="detail-section">
-                <strong>Status:</strong>{' '}
-                <span
-                  style={{
-                    color: selectedSensor.is_operational ? '#4caf50' : '#ff5252',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {selectedSensor.is_operational ? '✅ Operational' : '❌ Faulty'}
-                </span>
-              </div>
-              {selectedSensor.sensor_id.startsWith('VS-') && (() => {
-                const voltage = voltageData.find((v) => v.sensor_id === selectedSensor.sensor_id);
-                return voltage ? (
-                  <>
-                    <div className="detail-section">
-                      <strong>Voltage L1:</strong> {(voltage.voltage_l1 || 0).toFixed(2)}V
-                    </div>
-                    <div className="detail-section">
-                      <strong>Voltage L2:</strong> {(voltage.voltage_l2 || 0).toFixed(2)}V
-                    </div>
-                    <div className="detail-section">
-                      <strong>Voltage L3:</strong> {(voltage.voltage_l3 || 0).toFixed(2)}V
-                    </div>
-                    <div className="detail-section">
-                      <strong>Frequency:</strong> {(voltage.frequency || 0).toFixed(2)} Hz
-                    </div>
-                  </>
-                ) : null;
-              })()}
-              <div className="detail-section">
-                <strong>Last Update:</strong> {selectedSensor.seconds_since_update}s ago
-              </div>
-            </div>
+            })()}
           </div>
         </div>
       )}
