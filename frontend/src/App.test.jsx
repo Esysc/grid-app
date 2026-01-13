@@ -19,18 +19,28 @@ describe('App', () => {
       return mockEventSource;
     });
     
-    // Mock fetch - default response with empty arrays to prevent data.map errors
-    global.fetch = vi.fn();
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ 
-        access_token: 'mock-token',
-        total_sensors: 0, 
-        total_faults_24h: 0, 
-        violations: 0,
-        faults: [],
-        data: []
-      }),
+    // Mock fetch - handle different endpoints
+    global.fetch = vi.fn((url) => {
+      // Default response for sensor status endpoint
+      if (url.includes('/api/sensors/status')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [], // Return empty array for sensor status
+        });
+      }
+      
+      // Default response for other endpoints
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ 
+          access_token: 'mock-token',
+          total_sensors: 0, 
+          total_faults_24h: 0, 
+          violations: 0,
+          faults: [],
+          data: []
+        }),
+      });
     });
   });
 

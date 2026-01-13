@@ -33,10 +33,13 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       PYTHONUNBUFFERED: 1
+      MQTT_BROKER: mqtt://mqtt:1883
     ports:
       - "8000:8000"
     depends_on:
       timescaledb:
+        condition: service_healthy
+      mqtt:
         condition: service_healthy
     volumes:
       - ./backend:/app
@@ -95,10 +98,50 @@ services:
     networks:
       - grid-network
 
+  # MQTT Broker for sensor simulation
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: grid-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mqtt_data:/mosquitto/data
+      - mqtt_logs:/mosquitto/log
+    networks:
+      - grid-network
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 mosquitto_sub -t '$$SYS/#' -C 1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Sensor Simulator (runs independently)
+  sensor-simulator:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: grid-sensor-simulator
+    environment:
+      MQTT_BROKER: mqtt://mqtt:1883
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      mqtt:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - grid-network
+    command: python sensor_simulator.py
+
 volumes:
   timescale_data:
   pgadmin_data:
   localstack_data:
+  mqtt_data:
+  mqtt_logs:
 
 
 networks:

@@ -86,10 +86,14 @@ def mock_generator(monkeypatch: MonkeyPatch):  # pylint: disable=unused-argument
 def test_sse_requires_authentication(
     client: TestClient,  # pylint: disable=redefined-outer-name
 ):
-    """SSE endpoint should require JWT auth."""
+    """SSE endpoint should require valid JWT auth via query parameter."""
+    # No token provided - should return 422 (missing required query parameter)
     response = client.get("/stream/updates")
-    # FastAPI/Starlette typically respond 403 for missing auth dependency
-    assert response.status_code == 403
+    assert response.status_code == 422
+
+    # Invalid token provided - should return 401 (unauthorized)
+    response = client.get("/stream/updates?token=invalid_token")
+    assert response.status_code == 401
 
 
 @pytest.mark.skip(reason="SSE endpoint has infinite event generator that blocks")
