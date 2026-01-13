@@ -112,6 +112,13 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
     return '#ffffff';
   };
 
+  // Select preferred sensor (voltage first, else first available)
+  const selectPreferredSensor = (sensors) => {
+    if (!sensors || sensors.length === 0) return null;
+    const voltageSensor = sensors.find((s) => s.sensor_id.startsWith('VS-'));
+    return voltageSensor || sensors[0];
+  };
+
   // SVG node component
   const SVGNode = ({ node }) => {
     const sensors = getSensorsForNode(node.label);
@@ -121,7 +128,7 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
       <g
         key={node.id}
         className={`svg-node ${isFaulty ? 'faulty-pulse' : ''}`}
-        onClick={() => sensors.length > 0 && setSelectedSensor(sensors[0])}
+        onClick={() => sensors.length > 0 && setSelectedSensor(selectPreferredSensor(sensors))}
         style={{ cursor: sensors.length > 0 ? 'pointer' : 'default' }}
       >
         {/* Connection lines will be drawn separately */}
@@ -221,13 +228,14 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
     <div className="grid-topology-container">
       <div className="grid-topology">
         <h2>🔌 Grid Topology & Sensor Network</h2>
-        <svg
-          width="100%"
-          height="400"
-          viewBox="0 0 520 340"
-          className="topology-svg"
-          preserveAspectRatio="xMidYMid meet"
-        >
+        <div className="topology-scroll">
+          <svg
+            width="900"
+            height="520"
+            viewBox="0 0 900 520"
+            className="topology-svg"
+            preserveAspectRatio="xMidYMid meet"
+          >
           {/* Draw connections first (background) */}
           {connections.map((conn) => (
             <SVGConnection key={`${conn.from}-${conn.to}`} from={conn.from} to={conn.to} />
@@ -237,7 +245,8 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
           {nodes.map((node) => (
             <SVGNode key={node.id} node={node} />
           ))}
-        </svg>
+          </svg>
+        </div>
 
         <p className="topology-description">
           Interactive grid topology with real-time sensor data. Green = operational, Red = faulty.
