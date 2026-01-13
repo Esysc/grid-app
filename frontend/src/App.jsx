@@ -336,26 +336,60 @@ function App() {
       {view === 'dashboard' && (
         <>
           <GridStats stats={stats} sensorStatus={sensorStatus} />
-          <GridTopology />
-          <div className="dashboard-grid">
-            <div className="chart-container">
-              <h2>⚡ Voltage Monitoring</h2>
-              <PowerQualityChart
-                data={voltageData}
-                dataKey="voltage_l1"
-                yAxisLabel="Voltage (V)"
-                color="#8884d8"
-              />
-            </div>
+          <GridTopology sensorStatus={sensorStatus} voltageData={voltageData} />
+        <div className="dashboard-grid">
+          <div className="chart-container">
+            <h2>⚡ Voltage Monitoring</h2>
+            <PowerQualityChart
+              data={voltageData}
+              dataKey="voltage_l1"
+              yAxisLabel="Voltage (V)"
+              color="#8884d8"
+            />
+          </div>
 
-            <div className="chart-container">
-              <h2>📊 Power Quality</h2>
-              <PowerQualityChart
-                data={powerQuality}
-                dataKey="thd_voltage"
-                yAxisLabel="THD (%)"
-                color="#82ca9d"
-              />
+          <div className="chart-container">
+            <h2>📊 Power Quality</h2>
+            <PowerQualityChart
+              data={powerQuality}
+              dataKey="thd_voltage"
+              yAxisLabel="THD (%)"
+              color="#82ca9d"
+            />
+          </div>
+
+          <div className="bottom-section">
+            <div className="sensors-container">
+              <h2>📊 Active Sensors</h2>
+              <div className="sensor-detail-list">
+                {sensorStatus.length === 0 ? (
+                  <p className="no-data">No sensors available</p>
+                ) : (
+                  sensorStatus.map((sensor) => {
+                    const voltage = voltageData.find((v) => v.sensor_id === sensor.sensor_id);
+                    return (
+                      <div
+                        key={sensor.sensor_id}
+                        className={`sensor-detail-item ${!sensor.is_operational ? 'faulty' : ''}`}
+                      >
+                        <div className="detail-header">
+                          <span className="status-indicator" style={{
+                            backgroundColor: sensor.is_operational ? '#4caf50' : '#ff5252',
+                          }}></span>
+                          <strong className="detail-id">{sensor.sensor_id}</strong>
+                          <span className="detail-location">{sensor.location}</span>
+                        </div>
+                        <div className="detail-values">
+                          {voltage && (
+                            <span className="detail-reading">V: {(voltage.voltage_l1 || 0).toFixed(1)}V</span>
+                          )}
+                          <span className="detail-time">{sensor.seconds_since_update}s ago</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             <div className="fault-container">
@@ -363,6 +397,7 @@ function App() {
               <FaultTimeline faults={recentFaults} />
             </div>
           </div>
+        </div>
         </>
       )}
 

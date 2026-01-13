@@ -47,6 +47,19 @@
 
 .export-message {
   margin-top: 6px;
-  color: #cbd5f5;
+  padding: 8px 10px;
   font-size: 12px;
+  border-radius: 6px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+.export-message.success {
+  border-color: #22c55e;
+  color: #bbf7d0;
+}
+
+.export-message.error {
+  border-color: #ef4444;
+  color: #fecdd3;
 }

@@ -250,9 +250,9 @@ class TestGridDataGeneratorHistorical:
         )
 
         # 1 hour = 60 minutes, 5 minute intervals = 12 intervals
-        # 4 sensors per interval = 48 readings
-        assert len(voltage_readings) == 48
-        assert len(power_quality) == 48
+        # 7 sensors per interval = 84 readings
+        assert len(voltage_readings) == 84
+        assert len(power_quality) == 84
         assert len(fault_events) > 0
 
     def test_generate_historical_data_custom_interval(self):
@@ -263,9 +263,9 @@ class TestGridDataGeneratorHistorical:
         )
 
         # 2 hours = 120 minutes, 10 minute intervals = 12 intervals
-        # 4 sensors per interval = 48 readings
-        assert len(voltage_readings) == 48
-        assert len(power_quality) == 48
+        # 7 sensors per interval = 84 readings
+        assert len(voltage_readings) == 84
+        assert len(power_quality) == 84
 
     def test_generate_historical_data_voltage_validity(self):
         """Test that generated historical voltage readings are valid"""

@@ -11,6 +11,7 @@ const ExportMenu = ({ token, onViewArchives }) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -29,18 +30,30 @@ const ExportMenu = ({ token, onViewArchives }) => {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => {
+      setMessage('');
+      setMessageType('');
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   const callExport = async (path) => {
     if (DEMO) {
       setMessage('Demo mode: simulated export complete');
+      setMessageType('success');
       setOpen(false);
       return;
     }
     if (!token) {
       setMessage('Login required');
+      setMessageType('error');
       return;
     }
     setLoading(true);
     setMessage('');
+    setMessageType('');
     try {
       const response = await fetch(`/api${path}`, {
         method: 'POST',
@@ -52,12 +65,15 @@ const ExportMenu = ({ token, onViewArchives }) => {
       if (!response.ok || result.status === 'error') {
         const detail = result.message || response.statusText;
         setMessage(`Export failed: ${detail}`);
+        setMessageType('error');
       } else {
         const location = result.location || 'S3 export completed';
         setMessage(`Success: ${location}`);
+        setMessageType('success');
       }
     } catch (err) {
       setMessage(`Export failed: ${err.message}`);
+      setMessageType('error');
     } finally {
       setLoading(false);
       setOpen(false);
@@ -86,7 +102,7 @@ const ExportMenu = ({ token, onViewArchives }) => {
           </button>
         </div>
       )}
-      {message && <div className="export-message">{message}</div>}
+      {message && <div className={`export-message ${messageType}`}>{message}</div>}
     </div>
   );
 };

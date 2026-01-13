@@ -41,6 +41,8 @@ services:
         condition: service_healthy
       mqtt:
         condition: service_healthy
+      localstack:
+        condition: service_healthy
     volumes:
       - ./backend:/app
     networks:
@@ -97,6 +99,12 @@ services:
       - localstack_data:/var/lib/localstack
     networks:
       - grid-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4566/_localstack/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # MQTT Broker for sensor simulation
   mqtt:

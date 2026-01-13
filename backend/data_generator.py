@@ -12,8 +12,24 @@ from models import FaultEvent, PowerQualityMetrics, VoltageReading
 class GridDataGenerator:
     """Generate realistic grid monitoring data"""
 
-    SENSOR_IDS = ["VS-001", "VS-002", "VS-003", "VS-004"]
-    LOCATIONS = ["Substation A", "Substation B", "Feeder 3B", "Feeder 5A"]
+    SENSOR_IDS = [
+        "VS-001",
+        "VS-002",
+        "VS-003",
+        "VS-004",
+        "VS-005",
+        "VS-006",
+        "VS-007",
+    ]
+    LOCATIONS = [
+        "Substation A",
+        "Substation B",
+        "Feeder 3B",
+        "Feeder 5A",
+        "Feeder 1",
+        "Transformer 1",
+        "Transformer 2",
+    ]
     FAULT_TYPES = ["short_circuit", "ground_fault", "overvoltage", "undervoltage"]
     SEVERITIES = ["critical", "major", "minor"]
 
@@ -51,7 +67,7 @@ class GridDataGenerator:
         if sensor_id and sensor_id.startswith("VS-"):
             sensor_id = "PQ-" + sensor_id.split("-")[1]
         elif not sensor_id:
-            sensor_id = "PQ-" + random.choice(["001", "002", "003", "004"])
+            sensor_id = "PQ-" + random.choice(["001", "002", "003", "004", "005", "006", "007"])
         if location is None:
             location = random.choice(self.LOCATIONS)
 

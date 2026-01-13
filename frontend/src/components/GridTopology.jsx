@@ -1,23 +1,23 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import './GridTopology.css';
 
-const GridTopology = () => {
-  const canvasRef = useRef(null);
+const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedSensorIndex, setSelectedSensorIndex] = useState(0);
 
-  // Grid nodes representing substations and junction points
-  const nodes = [
-    { id: 'main-hub', x: 200, y: 150, label: 'Main Hub', type: 'hub' },
-    { id: 'substation-1', x: 100, y: 50, label: 'Substation 1', type: 'substation' },
-    { id: 'substation-2', x: 300, y: 50, label: 'Substation 2', type: 'substation' },
-    { id: 'transformer-1', x: 50, y: 250, label: 'Transformer 1', type: 'transformer' },
-    { id: 'transformer-2', x: 350, y: 250, label: 'Transformer 2', type: 'transformer' },
-    { id: 'feeder-1', x: 50, y: 350, label: 'Feeder 1', type: 'feeder' },
-    { id: 'feeder-2', x: 200, y: 350, label: 'Feeder 2', type: 'feeder' },
-    { id: 'feeder-3', x: 350, y: 350, label: 'Feeder 3', type: 'feeder' },
-  ];
+  // Known layout coordinates for key locations
+  const baseLayout = {
+    'Main Hub': { id: 'main-hub', x: 250, y: 80, label: 'Main Hub', type: 'hub' },
+    'Substation A': { id: 'substation-1', x: 80, y: 40, label: 'Substation A', type: 'substation', sensorType: 'voltage' },
+    'Substation B': { id: 'substation-2', x: 420, y: 40, label: 'Substation B', type: 'substation', sensorType: 'voltage' },
+    'Transformer 1': { id: 'transformer-1', x: 40, y: 200, label: 'Transformer 1', type: 'transformer', sensorType: 'power_quality' },
+    'Transformer 2': { id: 'transformer-2', x: 460, y: 200, label: 'Transformer 2', type: 'transformer', sensorType: 'power_quality' },
+    'Feeder 1': { id: 'feeder-1', x: 40, y: 300, label: 'Feeder 1', type: 'feeder', sensorType: 'power_quality' },
+    'Feeder 3B': { id: 'feeder-2', x: 250, y: 300, label: 'Feeder 3B', type: 'feeder', sensorType: 'voltage' },
+    'Feeder 5A': { id: 'feeder-3', x: 460, y: 300, label: 'Feeder 5A', type: 'feeder', sensorType: 'voltage' },
+  };
 
-  // Connections between nodes
-  const connections = [
+  const baseConnections = [
     { from: 'substation-1', to: 'main-hub' },
     { from: 'substation-2', to: 'main-hub' },
     { from: 'main-hub', to: 'transformer-1' },
@@ -28,108 +28,328 @@ const GridTopology = () => {
     { from: 'transformer-2', to: 'feeder-3' },
   ];
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw grid background
-    ctx.strokeStyle = '#2a2a4e';
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < canvas.width; x += 20) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 20) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-
-    // Draw connections
-    ctx.strokeStyle = '#4fc3f7';
-    ctx.lineWidth = 2;
-    connections.forEach((conn) => {
-      const fromNode = nodes.find((n) => n.id === conn.from);
-      const toNode = nodes.find((n) => n.id === conn.to);
-      if (fromNode && toNode) {
-        ctx.beginPath();
-        ctx.moveTo(fromNode.x, fromNode.y);
-        ctx.lineTo(toNode.x, toNode.y);
-        ctx.stroke();
+  // Build nodes: always show base layout, then add any unknown sensor locations
+  const nodes = useMemo(() => {
+    // Start with all base layout nodes (grid infrastructure)
+    const dynamicNodes = Object.values(baseLayout).map(node => ({ ...node }));
+    
+    // Update sensor types based on actual sensors present
+    const uniqueLocations = Array.from(new Set(sensorStatus.map((s) => s.location)));
+    const unknownLocations = [];
+    
+    uniqueLocations.forEach((location) => {
+      const sensorsHere = sensorStatus.filter((s) => s.location === location);
+      const hasVoltage = sensorsHere.some((s) => s.sensor_id.startsWith('VS-'));
+      const hasPQ = sensorsHere.some((s) => s.sensor_id.startsWith('PQ-'));
+      const preferredType = hasVoltage ? 'voltage' : hasPQ ? 'power_quality' : undefined;
+      
+      const knownNode = dynamicNodes.find(n => n.label === location);
+      if (knownNode) {
+        knownNode.sensorType = preferredType || knownNode.sensorType;
+      } else {
+        unknownLocations.push({ location, preferredType });
       }
     });
 
-    // Draw nodes
-    nodes.forEach((node) => {
-      // Node circle
-      ctx.fillStyle =
-        node.type === 'hub'
-          ? '#ff6b6b'
-          : node.type === 'substation'
-            ? '#4fc3f7'
-            : node.type === 'transformer'
-              ? '#ffd700'
-              : '#4caf50';
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, 15, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Node border
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Node label
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 10px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(node.label, node.x, node.y + 30);
+    // Auto-place unknown locations in a ring around the hub
+    const centerX = 250;
+    const centerY = 180;
+    const radius = 160;
+    unknownLocations.forEach((node, index) => {
+      const angle = (2 * Math.PI * index) / Math.max(unknownLocations.length, 1);
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      dynamicNodes.push({
+        id: `auto-${index}`,
+        x,
+        y,
+        label: node.location,
+        type: 'feeder',
+        sensorType: node.preferredType,
+      });
     });
 
-    // Draw legend
-    const legendX = canvas.width - 150;
-    const legendY = 10;
-    const legendItems = [
-      { label: 'Main Hub', color: '#ff6b6b' },
-      { label: 'Substation', color: '#4fc3f7' },
-      { label: 'Transformer', color: '#ffd700' },
-      { label: 'Feeder', color: '#4caf50' },
-    ];
+    return dynamicNodes;
+  }, [sensorStatus]);
 
-    ctx.font = 'bold 12px Arial';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('Legend', legendX, legendY);
+  // Connections include base ones that exist plus default hub links for auto nodes
+  const connections = useMemo(() => {
+    const nodeIds = new Set(nodes.map((n) => n.id));
+    const filteredBase = baseConnections.filter((c) => nodeIds.has(c.from) && nodeIds.has(c.to));
 
-    legendItems.forEach((item, i) => {
-      const y = legendY + 20 + i * 20;
-      ctx.fillStyle = item.color;
-      ctx.fillRect(legendX, y, 12, 12);
-      ctx.fillStyle = '#fff';
-      ctx.font = '11px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(item.label, legendX + 18, y + 10);
-    });
-  }, []);
+    const autoLinks = nodes
+      .filter((n) => n.id.startsWith('auto-'))
+      .map((n) => ({ from: n.id, to: 'main-hub' }));
+
+    return [...filteredBase, ...autoLinks];
+  }, [nodes]);
+
+  // Get sensors for a node (all sensors at the location)
+  const getSensorsForNode = (nodeLabel) => {
+    return sensorStatus.filter((sensor) => sensor.location === nodeLabel);
+  };
+
+  // Get voltage value for sensor
+  const getVoltageForSensor = (sensorId) => {
+    const reading = voltageData.find((v) => v.sensor_id === sensorId);
+    return reading ? (reading.voltage_l1 || 0).toFixed(1) : null;
+  };
+
+  // Determine node styling
+  const getNodeColor = (node) => {
+    const sensors = getSensorsForNode(node.label);
+    if (node.type === 'hub') return '#ff6b6b';
+    if (node.type === 'transformer') return '#ffd700';
+    if (sensors.length > 0) {
+      const anyFault = sensors.some((s) => !s.is_operational);
+      return anyFault ? '#ff5252' : '#4caf50';
+    }
+    return '#4fc3f7';
+  };
+
+  const getNodeBorder = (node) => {
+    const sensors = getSensorsForNode(node.label);
+    if (sensors.some((s) => !s.is_operational)) return '#ff5252';
+    return '#ffffff';
+  };
+
+  // Select preferred sensor (voltage first, else first available)
+  const selectPreferredSensor = (sensors) => {
+    if (!sensors || sensors.length === 0) return null;
+    const voltageSensor = sensors.find((s) => s.sensor_id.startsWith('VS-'));
+    return voltageSensor || sensors[0];
+  };
+
+  // SVG node component
+  const SVGNode = ({ node }) => {
+    const sensors = getSensorsForNode(node.label);
+    const isFaulty = sensors.some((s) => !s.is_operational);
+
+    return (
+      <g
+        key={node.id}
+        className={`svg-node ${isFaulty ? 'faulty-pulse' : ''}`}
+        onClick={() => {
+          if (sensors.length > 0) {
+            setSelectedNode(node);
+            setSelectedSensorIndex(0);
+          }
+        }}
+        style={{ cursor: sensors.length > 0 ? 'pointer' : 'default' }}
+      >
+        {/* Connection lines will be drawn separately */}
+        {/* Node circle */}
+        <circle
+          cx={node.x}
+          cy={node.y}
+          r={24}
+          fill={getNodeColor(node)}
+          stroke={getNodeBorder(node)}
+          strokeWidth="2"
+        />
+
+        {/* Fault indicator ring */}
+        {isFaulty && (
+          <circle
+            cx={node.x}
+            cy={node.y}
+            r={28}
+            fill="none"
+            stroke="#ff5252"
+            strokeWidth="2"
+            className="fault-ring"
+          />
+        )}
+
+        {/* Node label */}
+        <text
+          x={node.x}
+          y={node.y + 40}
+          textAnchor="middle"
+          className="node-label"
+          fill="#ffffff"
+        >
+          {node.label}
+        </text>
+
+        {/* Sensor badges (all sensors at this location) */}
+        {sensors.length > 0 && (
+          <g className="sensor-badges">
+            {sensors.slice(0, 4).map((s, idx) => {
+              const voltage = s.sensor_id.startsWith('VS-') ? getVoltageForSensor(s.sensor_id) : null;
+              const badgeY = node.y - 6 + idx * 14;
+              return (
+                <g key={s.sensor_id} transform={`translate(${node.x + 30}, ${badgeY})`}>
+                  <rect
+                    x={-2}
+                    y={-9}
+                    rx={4}
+                    ry={4}
+                    width={70}
+                    height={16}
+                    fill="rgba(30, 144, 255, 0.15)"
+                    stroke={s.is_operational ? '#4caf50' : '#ff5252'}
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={2}
+                    y={2}
+                    className="sensor-value"
+                    fill="#ffffff"
+                    fontSize="10"
+                  >
+                    {s.sensor_id}{voltage ? ` · ${voltage}V` : ''}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  // SVG connection component
+  const SVGConnection = ({ from, to }) => {
+    const fromNode = nodes.find((n) => n.id === from);
+    const toNode = nodes.find((n) => n.id === to);
+
+    if (!fromNode || !toNode) return null;
+
+    return (
+      <line
+        key={`${from}-${to}`}
+        x1={fromNode.x}
+        y1={fromNode.y}
+        x2={toNode.x}
+        y2={toNode.y}
+        stroke="#4fc3f7"
+        strokeWidth="2"
+        strokeOpacity="0.6"
+      />
+    );
+  };
 
   return (
-    <div className="grid-topology">
-      <h2>🔌 Grid Topology Visualization</h2>
-      <canvas ref={canvasRef} width={500} height={400} />
-      <p className="topology-description">
-        Interactive visualization of the power grid network showing substations, transformers, and
-        feeders
-      </p>
+    <div className="grid-topology-container">
+      <div className="grid-topology">
+        <h2>🔌 Grid Topology & Sensor Network</h2>
+        <div className="topology-scroll">
+          <svg
+            width="900"
+            height="520"
+            viewBox="0 0 900 520"
+            className="topology-svg"
+            preserveAspectRatio="xMidYMid meet"
+          >
+          {/* Draw connections first (background) */}
+          {connections.map((conn) => (
+            <SVGConnection key={`${conn.from}-${conn.to}`} from={conn.from} to={conn.to} />
+          ))}
+
+          {/* Draw nodes on top */}
+          {nodes.map((node) => (
+            <SVGNode key={node.id} node={node} />
+          ))}
+          </svg>
+        </div>
+
+        <p className="topology-description">
+          Interactive grid topology with real-time sensor data. Green = operational, Red = faulty.
+          Click on sensor nodes for details.
+        </p>
+      </div>
+
+      {/* Sensor detail modal */}
+      {selectedNode && (
+        <div className="modal-overlay" onClick={() => setSelectedNode(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setSelectedNode(null)}>
+              ✕
+            </button>
+            <h3>Sensors at {selectedNode.label}</h3>
+            {(() => {
+              const sensorsAtNode = getSensorsForNode(selectedNode.label);
+              const selectedSensor = sensorsAtNode[selectedSensorIndex];
+              if (!selectedSensor) return null;
+
+              return (
+                <div className="modal-body">
+                  {/* Sensor selector tabs */}
+                  {sensorsAtNode.length > 1 && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '16px',
+                      borderBottom: '1px solid #334155',
+                      paddingBottom: '12px',
+                    }}>
+                      {sensorsAtNode.map((sensor, idx) => (
+                        <button
+                          key={sensor.sensor_id}
+                          onClick={() => setSelectedSensorIndex(idx)}
+                          style={{
+                            padding: '8px 12px',
+                            background: idx === selectedSensorIndex ? '#667eea' : '#334155',
+                            color: '#e2e8f0',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: idx === selectedSensorIndex ? 'bold' : 'normal',
+                          }}
+                        >
+                          {sensor.sensor_id}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="detail-section">
+                    <strong>Sensor ID:</strong> {selectedSensor.sensor_id}
+                  </div>
+                  <div className="detail-section">
+                    <strong>Location:</strong> {selectedSensor.location}
+                  </div>
+                  <div className="detail-section">
+                    <strong>Status:</strong>{' '}
+                    <span
+                      style={{
+                        color: selectedSensor.is_operational ? '#4caf50' : '#ff5252',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {selectedSensor.is_operational ? '✅ Operational' : '❌ Faulty'}
+                    </span>
+                  </div>
+                  {selectedSensor.sensor_id.startsWith('VS-') && (() => {
+                    const voltage = voltageData.find((v) => v.sensor_id === selectedSensor.sensor_id);
+                    return voltage ? (
+                      <>
+                        <div className="detail-section">
+                          <strong>Voltage L1:</strong> {(voltage.voltage_l1 || 0).toFixed(2)}V
+                        </div>
+                        <div className="detail-section">
+                          <strong>Voltage L2:</strong> {(voltage.voltage_l2 || 0).toFixed(2)}V
+                        </div>
+                        <div className="detail-section">
+                          <strong>Voltage L3:</strong> {(voltage.voltage_l3 || 0).toFixed(2)}V
+                        </div>
+                        <div className="detail-section">
+                          <strong>Frequency:</strong> {(voltage.frequency || 0).toFixed(2)} Hz
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
+                  <div className="detail-section">
+                    <strong>Last Update:</strong> {selectedSensor.seconds_since_update}s ago
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
