@@ -39,9 +39,10 @@ describe('GridTopology Component', () => {
     expect(svg).toBeInTheDocument();
   });
 
-  test('renders sensor list sidebar', () => {
+  test('renders topology description', () => {
     render(<GridTopology sensorStatus={mockSensorStatus} voltageData={mockVoltageData} />);
-    expect(screen.getByText(/📊 Active Sensors/i)).toBeInTheDocument();
+    const description = screen.getByText(/Interactive grid topology with real-time sensor data/i);
+    expect(description).toBeInTheDocument();
   });
 
   test('renders with default empty sensor status', () => {
