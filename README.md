@@ -3,47 +3,46 @@
 [![GitHub Pages](https://img.shields.io/badge/demo-live-success?logo=github&style=flat-square)](https://esysc.github.io/grid-app/)
 [![Deploy to Pages](https://github.com/Esysc/grid-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Esysc/grid-app/actions/workflows/ci-cd.yml)
 
-⚡ A production-grade full-stack grid monitoring and analytics platform with JWT authentication, GraphQL API, real-time S3 export, and interactive topology visualization.
+⚡ A production-grade full-stack grid monitoring and analytics platform with JWT authentication, GraphQL API, real-time S3 export, and interactive SVG-based topology visualization.
 
 ## Project Overview
 
 This proof-of-concept showcases a distributed system for monitoring electrical grid infrastructure with:
 
-- **Real-time sensor data processing** from voltage sensors across the grid
-- **Fault detection and alerting** with severity classification
+- **Real-time sensor data processing** from voltage and power quality sensors across the grid
+- **Fault detection and alerting** with severity classification (CRITICAL, WARNING, INFO)
 - **Power quality analytics** including Total Harmonic Distortion (THD) monitoring
-- **JWT Authentication** for secure API access
-- **GraphQL API** for complex queries and subscriptions
-- **S3 Data Export** with LocalStack integration
-- **Grid Topology Visualization** with network diagrams
-- **Comprehensive Testing** with pytest and React Testing Library
-- **Live dashboard** with Server-Sent Events for real-time updates
-- **Time-series optimization** using TimescaleDB
+- **JWT Authentication** for secure API access with OAuth2 password flow
+- **GraphQL API** for complex queries and subscriptions (Strawberry)
+- **S3 Data Export** with LocalStack integration for testing
+- **Interactive Grid Topology Visualization** with SVG-based network diagrams and sensor badges
+- **Comprehensive Testing** with pytest (backend) and Vitest (frontend)
+- **Live dashboard** with Server-Sent Events (SSE) for real-time metric updates
+- **Time-series optimization** using TimescaleDB for efficient sensor data storage
+- **MQTT-based sensor simulator** for realistic data injection and fault injection
+- **Archive and historical data** exploration with date-based filtering
 
 ## Architecture
 
-```shell
-┌─────────────────────────┐      ┌──────────────────────────┐      ┌──────────────────┐
-│  React 18 Frontend      │◄────►│  FastAPI Backend v2.0    │◄────►│   TimescaleDB    │
-│  (Auth + Dashboard)     │      │  (REST + GraphQL + SSE)  │      │  (Time-series)   │
-└─────────────────────────┘      └──────────────────────────┘      └──────────────────┘
-                                           │                              ▲
-                                      ┌────┴────┐                         │
-                                      │         │                         │
-                                   LocalStack  pgAdmin          ┌─────────┴─────────┐
-                                     (S3)      (Dev)            │  MQTT Consumer    │
-                                                                └─────────▲─────────┘
-                                                                          │
-                                                            ┌─────────────┴─────────────┐
-                                                            │  Mosquitto MQTT Broker    │
-                                                            └─────────────▲─────────────┘
-                                                                          │
-                                                            ┌─────────────┴─────────────┐
-                                                            │  Sensor Simulator         │
-                                                            │  (8 Virtual Sensors)      │
-                                                            │  OPERATIONAL/FAULTY/      │
-                                                            │  RECOVERING States        │
-                                                            └───────────────────────────┘
+```
+┌──────────────────────────┐      ┌──────────────────────────┐      ┌──────────────────┐
+│ React 18 Frontend        │◄────►│ FastAPI Backend v2.0     │◄────►│ TimescaleDB      │
+│ (Vite + Auth + Viz)      │      │ (REST + GraphQL + SSE)   │      │ (Time-series DB) │
+└──────────────────────────┘      └──────────────────────────┘      └──────────────────┘
+                                          │          ▲
+                                          │          │
+                                     ┌────┴──┬───────┴────┐
+                                     │       │            │
+                                  pgAdmin  LocalStack    MQTT
+                                  (Dev)      (S3)      Consumer
+                                                            ▲
+                                                            │
+                                     ┌──────────────────────┴──────────────────┐
+                                     │                                         │
+                                 Mosquitto MQTT Broker              Sensor Data Generator
+                                  (Message Queue)                   (8 Virtual Sensors)
+                                                                    OPERATIONAL/FAULTY/
+                                                                    RECOVERING States
 ```
 
 ## Tech Stack
@@ -53,182 +52,275 @@ This proof-of-concept showcases a distributed system for monitoring electrical g
 | **Backend** | FastAPI | 0.109.0 | ✅ |
 | **Language** | Python | 3.12 | ✅ |
 | **Frontend** | React | 18.2.0 | ✅ |
+| **Build Tool** | Vite | 6.4.1 | ✅ |
 | **Charts** | Recharts | 2.10.3 | ✅ |
 | **Database** | TimescaleDB | Latest | ✅ |
-| **Auth** | JWT + python-jose | 3.3.0 | ✅ NEW |
-| **GraphQL** | Strawberry | 0.220.0 | ✅ NEW |
-| **Cloud Storage** | LocalStack S3 | Latest | ✅ NEW |
-| **MQTT Broker** | Mosquitto | 2.0 | ✅ NEW |
-| **Sensor Sim** | aiomqtt | 2.0.1 | ✅ NEW |
-| **Testing** | pytest + RTL | 7.0+ | ✅ NEW |
-| **Containers** | Docker Compose | 3.8 | ✅ |
+| **Auth** | JWT (python-jose) | 3.3.0 | ✅ |
+| **GraphQL** | Strawberry | 0.220.0+ | ✅ |
+| **Cloud Storage** | LocalStack S3 | Latest | ✅ |
+| **MQTT** | Mosquitto | 2.0 | ✅ |
+| **MQTT Client** | aiomqtt | 2.0.1+ | ✅ |
+| **Testing (BE)** | pytest | 7.0+ | ✅ |
+| **Testing (FE)** | Vitest | 4.0.16 | ✅ |
+| **Containers** | Docker Compose | 3.8+ | ✅ |
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Docker Desktop or Docker + Docker Compose
-- Git
-- Node.js 18+ (optional, for local development)
-- Python 3.12 (optional, for local development)
+- **Docker Desktop** (recommended) or Docker + Docker Compose
+- **Git**
+- **Node.js 18+** (optional, for local frontend development)
+- **Python 3.12** (optional, for local backend development)
 
-### Run with Docker Compose (Recommended)
+### Option 1: Run with Docker Compose (Recommended)
 
 ```bash
 # Clone and navigate
 git clone <your-repo-url>
 cd grid-app
 
-# Start all services (database, backend, frontend, localstack, pgadmin)
+# Copy and configure environment
+cp .env.example .env
+
+# Start all services (database, backend, frontend, MQTT, S3, pgAdmin)
 docker-compose up -d
 
 # Check status
 docker-compose ps
 
+# View logs
+docker-compose logs -f
+
 # Stop services
 docker-compose down
+
+# Clean up (remove volumes)
+docker-compose down -v
 ```
+
+### Option 2: Run Frontend + Backend Locally
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run backend server
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Development server
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173` (Vite default) and configured to proxy API calls to `http://localhost:8000`.
 
 ### Access Points
 
-| Service | URL | Authentication |
+| Service | URL | Notes |
 | --------- | ----- | ------------- |
-| Frontend Dashboard | <http://localhost:3000> | See `.env.example` for demo credentials |
-| API Documentation | <http://localhost:8000/docs> | JWT Bearer Token (from login) |
-| GraphQL Playground | <http://localhost:8000/graphql> | JWT Bearer Token (from login) |
-| pgAdmin | <http://localhost:5050> | See `.env.example` for credentials |
-| LocalStack S3 | <http://localhost:4566> | See `.env.example` for credentials |
+| **Frontend Dashboard** | http://localhost:3000 (Docker) or http://localhost:5173 (local) | Demo/test credentials: admin/secret |
+| **API Documentation** | http://localhost:8000/docs | Interactive Swagger UI with auth token input |
+| **GraphQL Playground** | http://localhost:8000/graphql | GraphQL IDE with schema explorer |
+| **pgAdmin** | http://localhost:5050 | Database admin (Docker only) |
+| **LocalStack S3** | http://localhost:4566 | S3 API endpoint (Docker only) |
+| **MQTT Broker** | localhost:1883 | MQTT protocol (Docker only) |
 
-## 📊 Features
+## 📊 Dashboard Features
 
-### 🔐 Version 2.0 - Enhanced Features
+### 🔌 Grid Topology & Sensor Network (NEW)
 
-#### MQTT Sensor Simulator (NEW)
+- **Interactive SVG visualization** of electrical grid infrastructure
+- **Node types**: Substations (green), Transformers (yellow), Feeders (cyan), Main Hub (red)
+- **Real-time sensor badges** showing voltage readings on each node
+- **Color-coded status**: Green = operational, Red = faulty, Yellow = warning
+- **Clickable nodes** to view all sensors at that location with sensor details modal
+- **Multi-sensor modal** with tabs to switch between voltage and power quality sensors
+- **Connection mapping** showing electrical relationships between infrastructure components
 
-- **Separate simulator instance** that injects realistic sensor data via MQTT
-- **State machine**: Sensors cycle through OPERATIONAL → FAULTY → RECOVERING states
-- **8 virtual sensors** (4 voltage + 4 power quality)
-- **Automatic data ingestion** into TimescaleDB via MQTT consumer
-- **Real-time anomaly injection**: Randomly inject faults, voltage swings, and power quality issues
-- See [MQTT Sensor Simulator Guide](instructions/MQTT_SENSOR_SIMULATOR.md) for details
+### 📊 Grid Statistics (Top Cards)
 
-#### JWT Authentication (NEW)
+- **Sensors Status**: Operational/Total count with percentage indicator
+- **Total Faults (24h)**: Recent fault event count with severity breakdown
+- **Power Quality Violations**: THD and harmonic distortion anomalies detected
+- **Average Voltage**: Real-time voltage reading across the network
+- **Power Factor**: Current power factor with status indicator
 
-- Secure login endpoint at `/auth/login`
-- OAuth2 password flow
-- Bearer token-based authorization
-- Protected data endpoints
-- Demo credentials available in `.env.example`
+### ⚡ Voltage Monitoring Chart
 
-#### GraphQL API (NEW)
+- Real-time voltage trend chart (L1, L2, L3 phases)
+- Time-series visualization with 24-hour historical data
+- Voltage deviation indicators (±5% from nominal 230V)
+- Interactive chart with hover tooltips
 
-- Full GraphQL schema at `/graphql`
-- Type-safe queries for voltage, power quality, faults
-- Strawberry GraphQL integration
-- Interactive playground included
+### 🔧 Power Quality Chart
 
-#### S3 Data Export (NEW)
+- Total Harmonic Distortion (THD) trend analysis
+- Individual harmonic component tracking
+- Quality violations and anomalies highlighted
+- Time-range filtering and zoom capabilities
 
-- Export voltage readings as JSON
-- Export fault events as CSV
-- LocalStack S3 integration for testing
-- File listing and retrieval endpoints
-- Auto-timestamped exports
+### ⚠️ Recent Faults Timeline
 
-#### Grid Topology Visualization (NEW)
+- Fault event list with timestamps and severity badges
+- CRITICAL (red), WARNING (yellow), INFO (blue) severity levels
+- Sensor ID and fault description for each event
+- Real-time updates via SSE integration
+- Scroll to view up to 20 most recent faults
 
-- Canvas-based network diagram
-- Substations, transformers, feeders visualization
-- Color-coded node types
-- Connection mapping
-- Dynamic rendering
+### 📝 Active Sensors List
 
-#### Comprehensive Testing (NEW)
+- Complete sensor inventory with operational status
+- Voltage sensors (VS-001 to VS-004) with real-time voltage readings
+- Power quality sensors (PQ-001 to PQ-004) with status
+- Last update timestamp for each sensor
+- Color-coded operational status
 
-- Backend unit tests with pytest
-- React component tests
-- Authentication flow tests
-- Data model validation
-- 90%+ code coverage capability
+### 💾 Export & Archive Features
 
-### Core Features
+- **Export Menu**:
+  - Export voltage data as JSON (last 24 hours)
+  - Export faults as CSV with detailed metadata
+  - Export to S3 with LocalStack integration
+  - Download exported files directly
 
-- **Real-time Monitoring**: Live voltage and power quality tracking
-- **Fault Detection**: Automatic severity classification
-- **Analytics Dashboard**: KPI cards and trend charts
-- **SSE Streaming**: Real-time metric updates
-- **Time-series DB**: Optimized for grid sensor data
+- **Archives View**:
+  - Browse historical data by date
+  - View exported files and metadata
+  - Download previous exports
+  - Date-based filtering for data exploration
+
+### Core Features (v2.0)
+
+- **Real-time Monitoring**: Live voltage and power quality tracking via SSE
+- **Fault Detection**: Automatic severity classification and alerting
+- **Analytics Dashboard**: KPI cards, trend charts, and metrics
+- **Authentication**: Secure JWT-based API access with login/logout
+- **GraphQL Support**: Type-safe queries for advanced data exploration
+- **Data Export**: S3 integration for archival and compliance
+- **Time-series Optimization**: TimescaleDB for efficient historical queries
+- **MQTT Integration**: Real-time sensor data injection with simulator
+- **Responsive UI**: Mobile-friendly React dashboard with Vite
 
 ## 🔐 Security & Authentication
 
-All data endpoints require JWT authentication:
+### Login Flow
+
+All data endpoints require JWT authentication. The application uses OAuth2 password flow:
 
 ```bash
-# 1. Login
+# 1. Login to get access token
 curl -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=admin&password=secret"
 
-# Response: {"access_token": "eyJ0eXAi...", "token_type": "bearer"}
+# Response:
+# {"access_token": "eyJ0eXAiOiJKV1QiLC...", "token_type": "bearer"}
 
-# 2. Use token
-# Replace <your_token> with the access_token from login
-curl http://localhost:8000/sensors/voltage \
-  -H "Authorization: Bearer <your_token>"
+# 2. Use token in subsequent requests
+curl http://localhost:8000/api/sensors/voltage \
+  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLC..."
+
+# 3. Get current user info (requires token)
+curl http://localhost:8000/auth/me \
+  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLC..."
 ```
+
+### Frontend Authentication
+
+The React app handles authentication automatically:
+- Stores JWT token in localStorage after login
+- Includes token in all API request headers
+- Redirects to login page if token is invalid or expired
+- Supports demo mode (no auth required) for GitHub Pages deployment
+
+### Demo Credentials
+
+For development and testing, default credentials are:
+- **Username**: `admin`
+- **Password**: `secret`
+
+⚠️ **Never use demo credentials in production**. Generate strong, unique credentials via your environment configuration.
 
 ## 📈 API Endpoints
 
-### JWT Authentication Configuration
+### Authentication (No Auth Required)
 
 ```shell
-POST   /auth/login              Login and get JWT token
-GET    /auth/me                 Get current user profile
+POST   /auth/login              # Login with username/password
+GET    /auth/me                 # Get current user profile (requires token)
 ```
 
-### Sensors (Requires Auth)
+### Sensor Data (Requires Auth)
 
 ```shell
-GET    /sensors/voltage         Voltage readings (query params: sensor_id, hours)
-GET    /sensors/power-quality   Power quality metrics
+GET    /api/sensors/voltage           # Voltage readings (query: sensor_id, limit, hours)
+GET    /api/sensors/power-quality     # Power quality metrics (query: sensor_id, limit)
+GET    /api/sensors/status            # Current sensor operational status
 ```
 
 ### Faults (Requires Auth)
 
 ```shell
-GET    /faults/recent           Recent fault events (params: hours, severity)
-GET    /faults/timeline         Historical faults (params: start_date, end_date)
+GET    /api/faults/recent             # Recent fault events (query: hours, severity, limit)
+GET    /api/faults/timeline           # Historical faults with date range filtering
+GET    /api/faults/{fault_id}         # Get details of specific fault
 ```
 
-### Analytics (Requires Auth)
+### Statistics & Monitoring (Requires Auth)
 
 ```shell
-GET    /stats                   Dashboard statistics
-GET    /stream/updates          Real-time SSE stream
+GET    /api/stats                     # Dashboard statistics (sensors, faults, violations)
+GET    /api/stream/updates            # Server-Sent Events stream for real-time updates
 ```
 
-### Export (Requires Auth)
+### Data Export (Requires Auth)
 
 ```shell
-POST   /export/voltage          Export voltage data (params: hours)
-POST   /export/faults           Export fault data
-GET    /export/list             List all exported files
+POST   /api/export/voltage            # Export voltage data (params: hours, format)
+POST   /api/export/faults             # Export fault data (params: hours, severity)
+GET    /api/export/list               # List all previously exported files
+GET    /api/export/download/{file_id} # Download exported file
 ```
 
-### GraphQL
+### GraphQL (Requires Auth)
 
 ```shell
-POST   /graphql                 GraphQL queries
-GET    /graphql                 GraphQL playground
+POST   /graphql                       # Execute GraphQL queries and mutations
+GET    /graphql                       # GraphQL Playground IDE
 ```
 
 ### Health & Development
 
 ```shell
-GET    /                        API info
-GET    /health                  Health check
-POST   /simulate/populate       Populate test data (dev only)
+GET    /                              # API information and version
+GET    /health                        # Health check / readiness probe
+POST   /api/simulate/populate         # Populate test data (development only)
 ```
+
+### Supported Query Parameters
+
+| Endpoint | Parameters | Notes |
+| -------- | ---------- | ----- |
+| `/api/sensors/voltage` | `sensor_id`, `limit` (default: 100), `hours` (default: 24) | Returns voltage readings L1, L2, L3 |
+| `/api/sensors/power-quality` | `sensor_id`, `limit` | Returns THD and harmonic data |
+| `/api/faults/recent` | `hours`, `severity`, `limit` | Severity: CRITICAL, WARNING, INFO |
+| `/api/export/voltage` | `hours` (default: 24), `format` | Format: json or csv |
+| `/api/export/faults` | `hours`, `severity` | Exports as CSV with metadata |
 
 ## Development
 
@@ -238,32 +330,62 @@ POST   /simulate/populate       Populate test data (dev only)
 cd backend
 
 # Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Install dev tools
-pip install pytest pytest-asyncio
+# Install dev dependencies (optional)
+pip install -r requirements-dev.txt
 
-# Run server
-uvicorn main:app --reload
+# Run development server with auto-reload
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Backend Tests
+### Backend Testing
 
 ```bash
 cd backend
 
 # Run all tests
-pytest test_main.py -v
+pytest -v
 
-# Run specific test class
-pytest test_main.py::TestDataGenerator -v
+# Run specific test file
+pytest tests/unit/test_auth.py -v
 
-# Run with coverage
-pytest test_main.py --cov=.
+# Run with coverage report
+pytest --cov=. --cov-report=html
+
+# Run tests matching pattern
+pytest -k "test_login" -v
+
+# Run integration tests
+pytest tests/integration/ -v
+```
+
+### Backend Code Quality
+
+```bash
+cd backend
+
+# Type checking with mypy
+mypy .
+
+# Linting with pylint
+pylint *.py
+
+# Format code with black
+black .
+
+# Import sorting with isort
+isort .
+
+# Security scanning
+bandit -r .
+
+# Run all checks
+pre-commit run --all-files
 ```
 
 ### Local Frontend Setup
@@ -274,75 +396,141 @@ cd frontend
 # Install dependencies
 npm install
 
-# Development server
-npm start
-
-# Run tests
-npm test
+# Development server (auto-reload)
+npm run dev
 
 # Build for production
 npm run build
+
+# Preview production build locally
+npm run preview
 ```
 
-### Code Quality
+### Frontend Testing
 
 ```bash
-# Install pre-commit hooks
-pip install pre-commit
-pre-commit install
+cd frontend
 
-# Run all checks
-pre-commit run --all-files
+# Run tests in watch mode
+npm test
 
-# Includes: black, isort, flake8, pylint, mypy, bandit, yaml lint, markdown lint
+# Run tests once (CI mode)
+npm test -- --run
+
+# Run with coverage report
+npm test -- --coverage --run
+
+# Run specific test file
+npm test -- src/components/GridTopology.test.jsx
+```
+
+### Code Quality (Frontend)
+
+```bash
+# Linting (ESLint configured via Vite)
+npm run lint  # if script exists
+
+# Format code with Prettier (if installed)
+npm run format
+
+# Type checking with TypeScript
+npm run type-check  # if script exists
 ```
 
 ## 🗂️ Project Structure
 
-```shell
+```
 grid-app/
 ├── backend/
-│   ├── main.py                  # FastAPI app with auth & GraphQL
-│   ├── auth.py                  # JWT authentication (NEW)
-│   ├── graphql_schema.py        # GraphQL type definitions (NEW)
-│   ├── s3_export.py             # S3 export functionality (NEW)
-│   ├── models.py                # Pydantic data models
-│   ├── database.py              # SQLAlchemy ORM & connection
-│   ├── data_generator.py        # Simulated sensor data
-│   ├── test_main.py             # Unit tests (NEW)
-│   ├── requirements.txt          # Python dependencies
-│   ├── Dockerfile               # Backend container
-│   └── .pylintrc                # Linting config
+│   ├── main.py                      # FastAPI app entry point (REST + GraphQL + SSE)
+│   ├── auth.py                      # JWT authentication & password hashing
+│   ├── graphql_schema.py            # Strawberry GraphQL type definitions
+│   ├── s3_export.py                 # S3 export functionality (LocalStack integration)
+│   ├── models.py                    # Pydantic data models & SQLAlchemy ORM
+│   ├── database.py                  # Database connection & session management
+│   ├── data_generator.py            # Simulated sensor data for development/demo
+│   ├── Dockerfile                   # Backend container definition
+│   ├── requirements.txt              # Python dependencies
+│   ├── requirements-dev.txt          # Dev tools (pytest, mypy, etc.)
+│   ├── mypy.ini                     # Type checking configuration
+│   ├── pytest.ini                   # Pytest configuration
+│   ├── tests/
+│   │   ├── conftest.py              # Pytest fixtures and configuration
+│   │   ├── unit/
+│   │   │   ├── test_auth.py         # Authentication tests
+│   │   │   ├── test_models.py       # Data model validation tests
+│   │   │   ├── test_logic.py        # Business logic tests
+│   │   │   └── test_s3_export.py    # S3 export functionality tests
+│   │   └── integration/
+│   │       ├── test_main.py         # API endpoint integration tests
+│   │       ├── test_graphql.py      # GraphQL query tests
+│   │       ├── test_api.py          # REST API tests
+│   │       ├── test_export_endpoints.py  # Export endpoint tests
+│   │       └── test_sse.py          # Server-Sent Events tests
+│   └── __pycache__/
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.js               # Main app with auth & SSE
-│   │   ├── App.css              # Global styling
-│   │   ├── App.test.js          # App tests (NEW)
-│   │   ├── index.js             # Entry point
+│   │   ├── App.jsx                  # Main app component with auth flow & routing
+│   │   ├── App.css                  # Global styling & layout
+│   │   ├── App.test.jsx             # App-level component tests
+│   │   ├── index.jsx                # React entry point
+│   │   ├── index.css                # Global styles
+│   │   ├── setupTests.js            # Test environment setup
 │   │   ├── components/
-│   │   │   ├── PowerQualityChart.jsx
-│   │   │   ├── FaultTimeline.jsx
-│   │   │   ├── GridStats.jsx
-│   │   │   ├── GridTopology.jsx    # NEW
-│   │   │   ├── GridTopology.css
-│   │   │   ├── GridTopology.test.jsx
-│   │   │   └── *.css
+│   │   │   ├── GridTopology.jsx     # SVG-based topology visualization
+│   │   │   ├── GridTopology.css     # Topology styling (fullwidth, centered)
+│   │   │   ├── GridTopology.test.jsx # Topology component tests
+│   │   │   ├── GridStats.jsx        # Statistics cards component
+│   │   │   ├── GridStats.css        # Stats styling
+│   │   │   ├── PowerQualityChart.jsx # THD & harmonic distortion chart
+│   │   │   ├── FaultTimeline.jsx    # Fault events list component
+│   │   │   ├── FaultTimeline.css    # Fault timeline styling
+│   │   │   ├── ExportMenu.jsx       # Data export interface
+│   │   │   ├── ExportMenu.css       # Export menu styling
+│   │   │   ├── ExportMenu.test.jsx  # Export menu tests
+│   │   │   ├── Archives.jsx         # Historical data exploration
+│   │   │   ├── Archives.css         # Archives styling
+│   │   │   ├── Archives.test.jsx    # Archives tests
+│   │   │   ├── DemoBanner.jsx       # Demo mode banner
+│   │   │   ├── DemoBanner.css       # Banner styling
+│   │   │   ├── DemoDataButton.jsx   # Demo data generation
+│   │   │   └── DemoDataButton.css   # Button styling
 │   │   └── public/
-│   ├── package.json             # Node dependencies
-│   ├── Dockerfile               # Frontend container
-│   └── .gitignore
+│   ├── index.html                   # HTML template
+│   ├── package.json                 # Node.js dependencies & scripts
+│   ├── vite.config.js               # Vite configuration with API proxy
+│   ├── vitest.config.js             # Vitest test runner configuration
+│   ├── Dockerfile                   # Frontend container (Nginx)
+│   ├── nginx.conf                   # Nginx configuration for frontend
+│   └── coverage/                    # Test coverage reports (generated)
 │
-├── docker-compose.yml           # Multi-container orchestration
-├── .pre-commit-config.yaml      # Linting hooks
+├── mqtt/
+│   └── sensor_simulator.py          # MQTT sensor data generator (external service)
+│
+├── instructions/
+│   ├── PROJECT_CONTEXT.md           # Comprehensive project documentation
+│   ├── IMPLEMENTATION_SUMMARY.md    # Feature implementation details
+│   ├── MQTT_SENSOR_SIMULATOR.md     # MQTT simulator setup & usage guide
+│   ├── GRAPHQL_PROPOSAL.md          # GraphQL architecture & usage
+│   ├── EXPORT_AND_ARCHIVE_FEATURES.md  # Export & archive feature guide
+│   ├── DEMO_DATA_AND_SENSOR_INTEGRATION.md  # Demo data setup
+│   ├── UNIT_TESTS_PROPOSAL.md       # Testing strategy
+│   ├── LINTING_FIXES.md             # Code quality guidelines
+│   └── context.md                   # Additional context & references
+│
 ├── .github/
 │   └── workflows/
-│       └── ci-cd.yml            # GitHub Actions pipeline
-├── instructions/
-│   └── PROJECT_CONTEXT.md       # Project documentation
-├── README.md                    # This file
-└── .gitignore
-
+│       └── ci-cd.yml                # GitHub Actions CI/CD pipeline
+│
+├── docker-compose.yml               # Multi-container orchestration
+├── .env.example                     # Environment variables template
+├── .gitignore                       # Git ignore rules
+├── .pre-commit-config.yaml          # Pre-commit hooks for code quality
+├── .mypy.ini                        # MyPy type checking configuration
+├── ELECTRICAL_METRICS_REFERENCE.md  # Electrical metrics documentation
+├── README.md                        # This file
+└── test-mqtt.sh                     # MQTT testing script
 ```
 
 ## 🧪 Testing
@@ -350,110 +538,373 @@ grid-app/
 ### Run All Tests
 
 ```bash
-# Backend tests
-cd backend && pytest test_main.py -v
+# Backend tests - all test suites
+cd backend && pytest -v
 
-# Frontend tests
-cd frontend && npm test -- --coverage
+# Backend tests - specific file
+cd backend && pytest tests/unit/test_auth.py -v
+
+# Backend tests - with coverage
+cd backend && pytest --cov=. --cov-report=html
+
+# Frontend tests - watch mode (interactive)
+cd frontend && npm test
+
+# Frontend tests - single run with coverage
+cd frontend && npm test -- --coverage --run
 ```
 
 ### Test Coverage
 
-- **Backend**: Data generation, model validation, authentication, password hashing
-- **Frontend**: Component rendering, user interactions, API integration
+**Backend (pytest):**
+- Unit tests: Data models, authentication, password hashing, business logic
+- Integration tests: API endpoints, GraphQL queries, S3 export, SSE streams
+- Coverage: Aim for 80%+ on critical paths
+- Test files located in `backend/tests/unit/` and `backend/tests/integration/`
+
+**Frontend (Vitest):**
+- Component tests: Rendering, user interactions, state management
+- Integration tests: API calls, authentication flow, data display
+- Coverage: Currently 64.7% statements, 48.61% branches
+- Test files: `src/**/*.test.jsx` files alongside components
+
+### Continuous Integration
+
+GitHub Actions pipeline (`.github/workflows/ci-cd.yml`) runs:
+- Backend: pytest with type checking (mypy)
+- Frontend: npm test with coverage report
+- Linting: Pre-commit hooks (black, isort, pylint, ESLint)
+- Build: Docker image build verification
 
 ## Deployment
 
-### Docker Compose Production
+### Docker Compose (Recommended for Local & Development)
 
 ```bash
-# Build images
+# Build all images
 docker-compose build
 
-# Run services
+# Run all services in detached mode
 docker-compose up -d
 
-# View logs
+# View logs in real-time
+docker-compose logs -f
+
+# View logs for specific service
 docker-compose logs -f backend
 docker-compose logs -f frontend
 
-# Stop services
+# Stop all services
 docker-compose down
+
+# Clean up: remove volumes and orphaned containers
+docker-compose down -v --remove-orphans
 ```
 
 ### Environment Variables
 
-The application uses environment variables for configuration. For local development:
+Create a `.env` file in the project root (copy from `.env.example`):
 
 ```bash
-# Copy the example file
 cp .env.example .env
-
-# Edit .env and configure:
-# - POSTGRES_PASSWORD: Use a strong random password for production
-# - JWT_SECRET_KEY: Use a 32+ character random string for production
-# - Other secrets: Generate unique values per environment
 ```
 
-**⚠️ IMPORTANT**: Never commit `.env` to version control. The file is in `.gitignore`.
-
-For Docker Compose, ensure these variables are set in your `.env`:
-
+**Database Configuration:**
 ```shell
-# Database
-POSTGRES_USER=<your-db-user>
-POSTGRES_PASSWORD=<your-secure-password>
-POSTGRES_DB=<your-db-name>
-DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB}
-
-# Application
-JWT_SECRET_KEY=<your-secure-32-char-key>
-PYTHONUNBUFFERABLE=1
+POSTGRES_USER=griduser              # Database user (default: griduser)
+POSTGRES_PASSWORD=<secure-password> # Strong password for production
+POSTGRES_DB=grid_monitoring         # Database name
+DATABASE_URL=postgresql+asyncpg://griduser:password@timescaledb:5432/grid_monitoring
 ```
 
-Refer to `.env.example` for all available configuration options.
+**Application Security:**
+```shell
+JWT_SECRET_KEY=<32-char-random-key>  # Generate: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+JWT_ALGORITHM=HS256                  # JWT signing algorithm
+JWT_EXPIRATION_HOURS=24              # Token expiration time
+PYTHONUNBUFFERABLE=1                 # Enable unbuffered Python output
+```
 
-## 📚 Documentation
+**MQTT Configuration:**
+```shell
+MQTT_HOST=mosquitto                  # MQTT broker host (Docker) or localhost
+MQTT_PORT=1883                       # MQTT port
+MQTT_TOPIC=grid/sensors/#           # Topic pattern for sensors
+```
 
-- [API Documentation](http://localhost:8000/docs) - Interactive Swagger UI
-- [GraphQL Playground](http://localhost:8000/graphql) - GraphQL IDE
-- [Project Context](instructions/PROJECT_CONTEXT.md) - Detailed project info
+**S3/LocalStack (Development):**
+```shell
+S3_ENDPOINT=http://localhost:4566    # LocalStack S3 endpoint
+S3_BUCKET=grid-monitor-exports       # S3 bucket name
+S3_ACCESS_KEY=test                   # LocalStack test credentials
+S3_SECRET_KEY=test
+```
+
+**⚠️ IMPORTANT**:
+- Never commit `.env` to version control (included in `.gitignore`)
+- For production, use strong random passwords and secrets
+- Rotate JWT_SECRET_KEY regularly
+- Store secrets in environment management tools (AWS Secrets Manager, HashiCorp Vault, etc.)
+
+### Production Considerations
+
+- Use strong, randomly-generated passwords for database and JWT
+- Enable HTTPS/TLS for API endpoints
+- Configure proper CORS headers for frontend domain
+- Use environment-specific configuration files
+- Enable logging and monitoring (ELK stack, Prometheus, etc.)
+- Implement rate limiting on API endpoints
+- Use database backups and replication
+- Monitor disk space and database performance
+- Keep dependencies updated for security patches
+
+## 📚 Documentation & Resources
+
+### Official Documentation
+
+- [**API Documentation (Swagger UI)**](http://localhost:8000/docs) - Interactive API documentation with try-it-out functionality
+- [**GraphQL Playground**](http://localhost:8000/graphql) - GraphQL IDE with schema introspection
+- [**Project Context**](instructions/PROJECT_CONTEXT.md) - Comprehensive project overview and technical details
+
+### Implementation Guides
+
+- [**MQTT Sensor Simulator Guide**](instructions/MQTT_SENSOR_SIMULATOR.md) - Setup and usage of MQTT-based sensor data generation
+- [**GraphQL Implementation**](instructions/GRAPHQL_PROPOSAL.md) - GraphQL schema, queries, and mutations
+- [**Data Export & Archives**](instructions/EXPORT_AND_ARCHIVE_FEATURES.md) - S3 export, file management, and historical data access
+- [**Demo Data Integration**](instructions/DEMO_DATA_AND_SENSOR_INTEGRATION.md) - Sensor simulator setup and demo mode
+- [**Testing Strategy**](instructions/UNIT_TESTS_PROPOSAL.md) - Test coverage, fixtures, and best practices
+- [**Implementation Summary**](instructions/IMPLEMENTATION_SUMMARY.md) - Feature-by-feature implementation details
+
+### Reference
+
+- [**Electrical Metrics Reference**](ELECTRICAL_METRICS_REFERENCE.md) - Grid monitoring terminology and electrical standards
+- [**Code Quality Standards**](instructions/LINTING_FIXES.md) - Linting rules, formatting, and pre-commit hooks
+
+### Quick Links
+
+- **GitHub Repository**: <https://github.com/Esysc/grid-app>
+- **Live Demo**: <https://esysc.github.io/grid-app/>
+- **Issues & Discussions**: GitHub Issues tab
 
 ## 🤝 Contributing
 
-1. Create a feature branch
-2. Make changes
-3. Run `pre-commit run --all-files`
-4. Submit pull request
+### Getting Started
 
-## ⚙️ Configuration
+1. Fork the repository
+2. Clone your fork: `git clone <your-fork-url>`
+3. Create a feature branch: `git checkout -b feature/your-feature-name`
+4. Make your changes with tests
+5. Ensure all tests pass: `pytest` (backend) and `npm test` (frontend)
+6. Run code quality checks: `pre-commit run --all-files`
+7. Push to your fork: `git push origin feature/your-feature-name`
+8. Submit a pull request with a clear description
 
-### Database
+### Code Style & Standards
 
-- **Host**: timescaledb:5432
-- **User**: griduser (Configurable via `POSTGRES_USER`)
-- **Password**: Configurable via `POSTGRES_PASSWORD`
-- **Database**: grid_monitoring (Configurable via `POSTGRES_DB`)
+**Python:**
+- Follow PEP 8 guidelines
+- Use type hints for all function signatures
+- Format code with `black`
+- Sort imports with `isort`
+- Lint with `pylint` and type-check with `mypy`
 
-### Authentication
+**JavaScript/JSX:**
+- Use ES6+ syntax and features
+- Follow React best practices
+- Use functional components with hooks
+- Write tests for all components
+- Format code with Prettier (if configured)
 
-- **Secret Key**: Configured via `JWT_SECRET_KEY` env variable
-- **Algorithm**: HS256
-- **Token Expiry**: 30 minutes
-- **Demo Credentials**: See `.env.example` file
+**Git Workflow:**
+- Use descriptive commit messages
+- Reference issues in commit messages (e.g., "Fixes #123")
+- Keep commits focused on a single feature/fix
+- Rebase before submitting pull request
 
-### S3 (LocalStack)
+### Testing Requirements
 
-- **Endpoint**: <http://localhost:4566>
-- **Bucket**: grid-monitor-exports
-- **Access Key**: test
-- **Secret Key**: test
+- All new features must include tests
+- Backend: Aim for 80%+ coverage on new code
+- Frontend: Component tests required for user-facing features
+- Run `pytest` and `npm test` before submitting PR
+
+### Pull Request Process
+
+1. Update documentation for any new features
+2. Add/update tests as needed
+3. Ensure CI/CD pipeline passes
+4. Request reviews from maintainers
+5. Address review comments
+6. Squash commits if requested
+7. Merge when approved
+
+## ⚙️ Configuration Reference
+
+### Database (TimescaleDB)
+
+| Setting | Default | Notes |
+| ------- | ------- | ----- |
+| **Host** | timescaledb | Docker service name (localhost for local dev) |
+| **Port** | 5432 | PostgreSQL standard port |
+| **User** | griduser | Set via POSTGRES_USER env var |
+| **Password** | *(required)* | Set via POSTGRES_PASSWORD env var - use strong password in production |
+| **Database** | grid_monitoring | Set via POSTGRES_DB env var |
+| **Connection Pool** | 10 | Min/max connections for asyncpg |
+| **SSL Mode** | disable | Set to `require` in production |
+
+### JWT Authentication
+
+| Setting | Default | Notes |
+| ------- | ------- | ----- |
+| **Algorithm** | HS256 | HMAC SHA256 signing |
+| **Secret Key** | *(required)* | 32+ character random string |
+| **Expiration** | 24 hours | Can be configured per environment |
+| **Refresh Token** | Not implemented | Future enhancement |
+
+### MQTT Broker (Mosquitto)
+
+| Setting | Default | Notes |
+| ------- | ------- | ----- |
+| **Host** | mosquitto | Docker service name (localhost for local) |
+| **Port** | 1883 | Standard MQTT port |
+| **Topic Pattern** | grid/sensors/# | Hierarchical topic structure |
+| **QoS** | 1 | At-least-once delivery guarantee |
+| **Retained Messages** | Enabled | Last message retained for new subscribers |
+
+### S3 / LocalStack
+
+| Setting | Default | Notes |
+| ------- | ------- | ----- |
+| **Endpoint** | http://localhost:4566 | LocalStack S3 endpoint |
+| **Region** | us-east-1 | AWS region setting |
+| **Bucket** | grid-monitor-exports | S3 bucket for file exports |
+| **Access Key** | test | LocalStack demo credentials |
+| **Secret Key** | test | Change for production |
+| **Signature Version** | s3v4 | AWS signature algorithm |
+
+### Application Settings
+
+| Setting | Default | Notes |
+| ------- | ------- | ----- |
+| **API Host** | 0.0.0.0 | Bind to all interfaces |
+| **API Port** | 8000 | FastAPI server port |
+| **Frontend Port** | 3000 (Docker) / 5173 (Vite dev) | Development server port |
+| **Log Level** | INFO | DEBUG/INFO/WARNING/ERROR |
+| **CORS Origins** | * | Restrict in production |
+| **HTTPS** | Disabled | Enable in production |
+
+### Sensor Configuration
+
+| Sensor Type | ID Range | Count | Sampling Rate |
+| ----------- | --------- | ----- | ------------- |
+| **Voltage Sensors** | VS-001 to VS-004 | 4 | 1 Hz (1 second) |
+| **Power Quality Sensors** | PQ-001 to PQ-004 | 4 | 1 Hz (1 second) |
+| **Total** | - | 8 | 1 Hz |
 
 ## 📄 License
 
-This project is provided as-is for demonstration purposes.
+This project is provided as-is for demonstration and educational purposes.
+
+**Note:** Some icons and assets may be subject to their respective licenses. Please review individual component licenses if using in production.
+
+## 🆘 Troubleshooting
+
+### Common Issues
+
+**Problem**: Docker containers won't start
+```bash
+# Solution: Check port conflicts
+lsof -i :8000  # Check port 8000
+lsof -i :5432  # Check port 5432
+docker-compose down -v  # Clean up
+docker-compose up -d --no-cache  # Rebuild
+```
+
+**Problem**: Frontend can't connect to backend
+```bash
+# Check proxy configuration in frontend/vite.config.js
+# For Docker: target should be 'http://backend:8000'
+# For local dev: target should be 'http://localhost:8000'
+```
+
+**Problem**: Database connection error
+```bash
+# Verify database is running
+docker-compose logs timescaledb
+
+# Check database credentials in .env
+cat .env | grep POSTGRES
+
+# Reset database
+docker-compose down -v
+docker-compose up -d timescaledb
+sleep 10  # Wait for initialization
+```
+
+**Problem**: JWT authentication failing
+```bash
+# Verify JWT_SECRET_KEY is set
+echo $JWT_SECRET_KEY
+
+# Check token in browser console
+localStorage.getItem('accessToken')
+
+# Re-login to get new token
+```
+
+**Problem**: MQTT sensor data not appearing
+```bash
+# Check MQTT broker
+docker-compose logs mosquitto
+
+# Check sensor simulator
+docker-compose logs backend
+
+# Verify MQTT connectivity
+mosquitto_sub -h localhost -t "grid/sensors/#"
+```
+
+### Getting Help
+
+- Check [Project Context](instructions/PROJECT_CONTEXT.md) for detailed info
+- Review GitHub Issues for similar problems
+- Check application logs: `docker-compose logs`
+- Read API documentation: http://localhost:8000/docs
 
 ## 📝 Version History
 
-- **v2.0.0** - Added JWT auth, GraphQL, S3 export, topology visualization, tests
-- **v1.0.0** - Initial REST API with real-time monitoring dashboard
+### v2.0.0 (Current)
+✨ **Major Release** - Production-Ready Features
+
+**New Features:**
+- JWT authentication with OAuth2 password flow
+- GraphQL API with Strawberry implementation
+- S3 data export with LocalStack integration
+- Interactive SVG-based topology visualization with sensor badges
+- MQTT-based sensor simulator with state machine
+- Comprehensive pytest unit and integration tests
+- Vitest for React component testing
+- Server-Sent Events (SSE) for real-time updates
+- Archive and historical data exploration
+- Export menu with CSV/JSON formats
+- Grid statistics KPI dashboard cards
+
+**Improvements:**
+- Fullwidth grid topology layout optimization
+- Centered topology visualization with responsive design
+- Enhanced error handling and validation
+- Type hints throughout Python codebase
+- Pre-commit hooks for code quality
+- GitHub Actions CI/CD pipeline
+- Improved documentation and API references
+
+**Breaking Changes:**
+- Frontend routing changed (Dashboard, Archives, Logout views)
+- API endpoints now require JWT authentication
+- Database schema optimized for TimescaleDB
+
+### v1.0.0 (Initial Release)
+- REST API with real-time monitoring
+- React dashboard with charts
+- Basic fault detection
+- PostgreSQL time-series storage
