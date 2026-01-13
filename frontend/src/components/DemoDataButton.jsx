@@ -66,18 +66,18 @@ const DemoDataButton = ({ token }) => {
           disabled={loading || cooldown > 0 || !token}
           title={
             cooldown > 0
-              ? `Wait ${cooldown}s before next populate`
-              : 'Generates sample voltage, power quality, and fault events'
+              ? `Wait ${cooldown}s before next load`
+              : 'Loads simulated historical data for testing and demonstrations'
           }
         >
           {loading ? (
             <>
-              <span className="demo-data-spinner"></span> Populating...
+              <span className="demo-data-spinner"></span> Loading...
             </>
           ) : cooldown > 0 ? (
             `Wait ${cooldown}s`
           ) : (
-            '🎲 Populate Demo Data'
+            '📊 Load Simulated Static Data'
           )}
         </button>
         {message && (
@@ -90,14 +90,14 @@ const DemoDataButton = ({ token }) => {
       {showConfirm && (
         <div className="demo-data-confirm-overlay" onClick={() => setShowConfirm(false)}>
           <div className="demo-data-confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Populate Demo Data?</h3>
-            <p>This will insert synthetic demo data for the last 24 hours into the database.</p>
+            <h3>Load Simulated Static Data?</h3>
+            <p>This will insert 24 hours of simulated historical data into the database for testing. Live MQTT sensor data will continue running in parallel.</p>
             <div className="demo-data-confirm-actions">
               <button className="demo-data-confirm-cancel" onClick={() => setShowConfirm(false)}>
                 Cancel
               </button>
               <button className="demo-data-confirm-proceed" onClick={handlePopulate}>
-                Proceed
+                Load Data
               </button>
             </div>
           </div>

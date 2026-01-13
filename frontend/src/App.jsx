@@ -22,9 +22,11 @@ function App() {
   const [recentFaults, setRecentFaults] = useState([]);
   const [powerQuality, setPowerQuality] = useState([]);
   const [voltageData, setVoltageData] = useState([]);
+  const [sensorStatus, setSensorStatus] = useState([]);
   const [stats, setStats] = useState({ total_sensors: 0, total_faults_24h: 0, violations: 0 });
   const [accessToken, setAccessToken] = useState(null);
   const [view, setView] = useState('dashboard');
+  const pollingRef = useRef(null);
   const eventSourceRef = useRef(null);
 
   useEffect(() => {
@@ -46,6 +48,9 @@ function App() {
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+      }
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
       }
     };
   }, []);
@@ -98,10 +103,6 @@ function App() {
     setPowerQuality([]);
     setVoltageData([]);
     setStats({ total_sensors: 0, total_faults_24h: 0, violations: 0 });
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
   };
 
   const startDataFetch = (token) => {
@@ -132,11 +133,7 @@ function App() {
         },
       ]);
       setStats({ total_sensors: 12, total_faults_24h: 1, violations: 0 });
-      // No SSE in demo mode
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
+      // No polling needed in demo mode
       return;
     }
 
@@ -144,11 +141,21 @@ function App() {
     fetchPowerQuality(token);
     fetchVoltage(token);
     fetchStats(token);
+    fetchSensorStatus(token);
 
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+    // Poll for real-time updates every 5 seconds (matching MQTT publishing rate)
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
     }
-    const eventSource = new EventSource('/api/stream');
+    pollingRef.current = setInterval(() => {
+      fetchVoltage(token);
+      fetchPowerQuality(token);
+      fetchSensorStatus(token);
+      fetchStats(token);
+    }, 5000);
+
+    // Connect to SSE stream for real-time push updates (pass token in query string)
+    const eventSource = new EventSource(`/api/stream/updates?token=${token}`);
     eventSourceRef.current = eventSource;
 
     eventSource.addEventListener('message', (event) => {
@@ -166,6 +173,11 @@ function App() {
       } catch (e) {
         console.error('Error parsing SSE data:', e);
       }
+    });
+
+    eventSource.addEventListener('error', () => {
+      console.warn('SSE connection failed, relying on polling');
+      eventSource.close();
     });
   };
 
@@ -222,6 +234,20 @@ function App() {
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchSensorStatus = async (token) => {
+    try {
+      const response = await fetch('/api/sensors/status', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSensorStatus(data);
+      }
+    } catch (error) {
+      console.error('Error fetching sensor status:', error);
     }
   };
 
@@ -301,7 +327,7 @@ function App() {
 
       {view === 'dashboard' && (
         <>
-          <GridStats stats={stats} />
+          <GridStats stats={stats} sensorStatus={sensorStatus} />
           <GridTopology />
           <div className="dashboard-grid">
             <div className="chart-container">

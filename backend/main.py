@@ -10,6 +10,8 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 from typing import cast as typing_cast
 
 from auth import (
+    ALGORITHM,
+    SECRET_KEY,
     Token,
     User,
     authenticate_user,
@@ -31,13 +33,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from graphql_schema import schema
+from jose import JWTError, jwt
 from models import (
     FaultEvent,
     HealthCheck,
     PowerQualityMetrics,
     SensorStats,
+    SensorStatus,
     VoltageReading,
 )
+from mqtt_consumer import start_mqtt_consumer, stop_mqtt_consumer
 from s3_export import S3Exporter
 from sqlalchemy import Float, and_
 from sqlalchemy import func as sa_func
@@ -75,9 +80,21 @@ async def lifespan(
     except Exception as e:
         print(f"⚠️ S3 bucket initialization failed: {e}")
 
+    # Start MQTT consumer in background
+    mqtt_task = asyncio.create_task(start_mqtt_consumer())
+    print("✅ MQTT consumer started")
+
     yield
+
     # Shutdown
+    await stop_mqtt_consumer()
+    mqtt_task.cancel()
+    try:
+        await mqtt_task
+    except asyncio.CancelledError:
+        pass
     await close_db()
+    print("👋 Application shutdown complete")
     print("✅ Database connections closed")
 
 
@@ -275,6 +292,107 @@ async def ingest_power_quality(
 
 
 @app.get(
+    "/sensors/list",
+    response_model=List[str],
+    tags=["Sensors"],
+)
+async def list_active_sensors(
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> List[str]:
+    """Get list of all active sensors (from last 1 hour)"""
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
+
+    # Get unique sensor IDs from voltage readings
+    voltage_query: Select[Tuple[str]] = (
+        select(VoltageReadingDB.sensor_id)
+        .where(VoltageReadingDB.timestamp >= cutoff_time)
+        .distinct()
+    )
+    voltage_result = await db.execute(voltage_query)
+    voltage_sensors = [row[0] for row in voltage_result.fetchall()]
+
+    # Get unique sensor IDs from power quality
+    pq_query: Select[Tuple[str]] = (
+        select(PowerQualityDB.sensor_id).where(PowerQualityDB.timestamp >= cutoff_time).distinct()
+    )
+    pq_result = await db.execute(pq_query)
+    pq_sensors = [row[0] for row in pq_result.fetchall()]
+
+    # Combine and deduplicate
+    all_sensors = list(set(voltage_sensors + pq_sensors))
+    return sorted(all_sensors)
+
+
+@app.get(
+    "/sensors/status",
+    response_model=List[SensorStatus],
+    tags=["Sensors"],
+)
+async def get_sensor_status(
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> List[SensorStatus]:
+    """Get current status of all active sensors with latest readings"""
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
+    now = datetime.now(timezone.utc)
+    sensor_statuses: List[SensorStatus] = []
+
+    # Get latest voltage readings for each sensor
+    voltage_query = (
+        select(VoltageReadingDB)
+        .where(VoltageReadingDB.timestamp >= cutoff_time)
+        .order_by(VoltageReadingDB.sensor_id, VoltageReadingDB.timestamp.desc())
+    )
+    voltage_result = await db.execute(voltage_query)
+    voltage_readings = voltage_result.scalars().all()
+
+    # Track which sensors we've already processed
+    processed_sensors: set[str] = set()
+
+    for reading in voltage_readings:
+        if reading.sensor_id not in processed_sensors:
+            seconds_since = int((now - reading.timestamp).total_seconds())
+            status = SensorStatus(
+                sensor_id=reading.sensor_id,
+                sensor_type="voltage",
+                location=reading.location,
+                last_reading_timestamp=reading.timestamp,
+                is_operational=seconds_since < 60,  # Operational if data < 1 min old
+                seconds_since_update=seconds_since,
+                latest_value=reading.voltage_l1,
+            )
+            sensor_statuses.append(status)
+            processed_sensors.add(reading.sensor_id)
+
+    # Get latest power quality readings for each sensor
+    pq_query = (
+        select(PowerQualityDB)
+        .where(PowerQualityDB.timestamp >= cutoff_time)
+        .order_by(PowerQualityDB.sensor_id, PowerQualityDB.timestamp.desc())
+    )
+    pq_result = await db.execute(pq_query)
+    pq_readings = pq_result.scalars().all()
+
+    for reading in pq_readings:
+        if reading.sensor_id not in processed_sensors:
+            seconds_since = int((now - reading.timestamp).total_seconds())
+            status = SensorStatus(
+                sensor_id=reading.sensor_id,
+                sensor_type="power_quality",
+                location=reading.location,
+                last_reading_timestamp=reading.timestamp,
+                is_operational=seconds_since < 60,
+                seconds_since_update=seconds_since,
+                latest_value=reading.power_factor,
+            )
+            sensor_statuses.append(status)
+            processed_sensors.add(reading.sensor_id)
+
+    return sorted(sensor_statuses, key=lambda x: x.sensor_id)
+
+
+@app.get(
     "/faults/recent",
     response_model=List[FaultEvent],
     tags=["Faults"],
@@ -422,13 +540,21 @@ async def get_sensor_stats(
 
 @app.get("/stream/updates", tags=["Real-time"])
 async def stream_updates(
-    current_user: User = Depends(get_current_user),
+    token: str = Query(..., description="JWT token for authentication"),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """Server-Sent Events endpoint for real-time updates"""
+    """Server-Sent Events endpoint for real-time updates (token via query string for EventSource compatibility)"""
+    # Validate token
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str | None = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-    # Touch dependency to satisfy linting while keeping health check
-    _ = (db, current_user)
+    # Touch dependency to satisfy linting
+    _ = db
 
     async def event_generator():
         """Generate SSE events with live sensor data"""

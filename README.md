@@ -27,11 +27,23 @@ This proof-of-concept showcases a distributed system for monitoring electrical g
 │  React 18 Frontend      │◄────►│  FastAPI Backend v2.0    │◄────►│   TimescaleDB    │
 │  (Auth + Dashboard)     │      │  (REST + GraphQL + SSE)  │      │  (Time-series)   │
 └─────────────────────────┘      └──────────────────────────┘      └──────────────────┘
-                                           │
-                                      ┌────┴────┐
-                                      │          │
-                                   LocalStack   pgAdmin
-                                     (S3)       (Dev)
+                                           │                              ▲
+                                      ┌────┴────┐                         │
+                                      │         │                         │
+                                   LocalStack  pgAdmin          ┌─────────┴─────────┐
+                                     (S3)      (Dev)            │  MQTT Consumer    │
+                                                                └─────────▲─────────┘
+                                                                          │
+                                                            ┌─────────────┴─────────────┐
+                                                            │  Mosquitto MQTT Broker    │
+                                                            └─────────────▲─────────────┘
+                                                                          │
+                                                            ┌─────────────┴─────────────┐
+                                                            │  Sensor Simulator         │
+                                                            │  (8 Virtual Sensors)      │
+                                                            │  OPERATIONAL/FAULTY/      │
+                                                            │  RECOVERING States        │
+                                                            └───────────────────────────┘
 ```
 
 ## Tech Stack
@@ -46,6 +58,8 @@ This proof-of-concept showcases a distributed system for monitoring electrical g
 | **Auth** | JWT + python-jose | 3.3.0 | ✅ NEW |
 | **GraphQL** | Strawberry | 0.220.0 | ✅ NEW |
 | **Cloud Storage** | LocalStack S3 | Latest | ✅ NEW |
+| **MQTT Broker** | Mosquitto | 2.0 | ✅ NEW |
+| **Sensor Sim** | aiomqtt | 2.0.1 | ✅ NEW |
 | **Testing** | pytest + RTL | 7.0+ | ✅ NEW |
 | **Containers** | Docker Compose | 3.8 | ✅ |
 
@@ -88,6 +102,15 @@ docker-compose down
 ## 📊 Features
 
 ### 🔐 Version 2.0 - Enhanced Features
+
+#### MQTT Sensor Simulator (NEW)
+
+- **Separate simulator instance** that injects realistic sensor data via MQTT
+- **State machine**: Sensors cycle through OPERATIONAL → FAULTY → RECOVERING states
+- **8 virtual sensors** (4 voltage + 4 power quality)
+- **Automatic data ingestion** into TimescaleDB via MQTT consumer
+- **Real-time anomaly injection**: Randomly inject faults, voltage swings, and power quality issues
+- See [MQTT Sensor Simulator Guide](instructions/MQTT_SENSOR_SIMULATOR.md) for details
 
 #### JWT Authentication (NEW)
 

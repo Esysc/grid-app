@@ -123,3 +123,30 @@ class HealthCheck(BaseModel):
     timestamp: datetime
     database_connected: bool
     version: str = "1.0.0"
+
+
+class SensorStatus(BaseModel):
+    """Current sensor status from MQTT data"""
+
+    sensor_id: str
+    sensor_type: str  # 'voltage' or 'power_quality'
+    location: str
+    last_reading_timestamp: datetime
+    is_operational: bool
+    seconds_since_update: int
+    latest_value: Optional[float] = None  # Latest voltage or power factor
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "sensor_id": "VS-001",
+                "sensor_type": "voltage",
+                "location": "Substation A",
+                "last_reading_timestamp": "2026-01-13T10:30:45.123Z",
+                "is_operational": True,
+                "seconds_since_update": 5,
+                "latest_value": 230.5,
+            }
+        },
+    )
