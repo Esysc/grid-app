@@ -96,6 +96,14 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Close EventSource and polling
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+
     localStorage.removeItem('accessToken');
     setAccessToken(null);
     setIsAuthenticated(false);
