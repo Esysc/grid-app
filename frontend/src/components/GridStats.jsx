@@ -44,6 +44,19 @@ const GridStats = ({ stats, sensorStatus = [] }) => {
           <div className="stat-label">Avg. Voltage (24h)</div>
         </div>
       </div>
+
+      <div className="stat-card">
+        <div className="stat-icon">⚙️</div>
+        <div className="stat-content">
+          <div className="stat-value">{stats.avg_power_factor?.toFixed(3) || '—'}</div>
+          <div className="stat-label">Avg. Power Factor</div>
+          {stats.avg_power_factor && (
+            <div className="stat-subtext">
+              {stats.avg_power_factor >= 0.95 ? '✅ Good' : stats.avg_power_factor >= 0.85 ? '⚠️ Fair' : '❌ Poor'}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -53,6 +66,7 @@ GridStats.propTypes = {
     total_faults_24h: PropTypes.number,
     quality_violations: PropTypes.number,
     avg_voltage: PropTypes.number,
+    avg_power_factor: PropTypes.number,
   }).isRequired,
   sensorStatus: PropTypes.arrayOf(
     PropTypes.shape({

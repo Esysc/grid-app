@@ -4,23 +4,49 @@ import '@testing-library/jest-dom';
 import GridTopology from '../components/GridTopology';
 
 describe('GridTopology Component', () => {
+  const mockSensorStatus = [
+    {
+      sensor_id: 'VS-001',
+      location: 'Substation A',
+      is_operational: true,
+      seconds_since_update: 5,
+    },
+  ];
+
+  const mockVoltageData = [
+    {
+      sensor_id: 'VS-001',
+      voltage_l1: 230.5,
+      voltage_l2: 230.2,
+      voltage_l3: 229.8,
+      frequency: 50.0,
+    },
+  ];
+
   test('renders grid topology heading', () => {
-    render(<GridTopology />);
-    const heading = screen.getByRole('heading', { name: /🔌 Grid Topology Visualization/i });
+    render(<GridTopology sensorStatus={mockSensorStatus} voltageData={mockVoltageData} />);
+    const heading = screen.getByRole('heading', {
+      name: /🔌 Grid Topology & Sensor Network/i,
+    });
     expect(heading).toBeInTheDocument();
   });
 
-  test('renders canvas element', () => {
-    render(<GridTopology />);
-    const { container } = render(<GridTopology />);
-    const canvas = container.querySelector('canvas');
-    expect(canvas).toBeInTheDocument();
+  test('renders SVG element', () => {
+    const { container } = render(
+      <GridTopology sensorStatus={mockSensorStatus} voltageData={mockVoltageData} />
+    );
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
   });
 
-  test('renders description text', () => {
-    render(<GridTopology />);
-    expect(
-      screen.getByText(/Interactive visualization of the power grid network/i)
-    ).toBeInTheDocument();
+  test('renders sensor list sidebar', () => {
+    render(<GridTopology sensorStatus={mockSensorStatus} voltageData={mockVoltageData} />);
+    expect(screen.getByText(/📊 Active Sensors/i)).toBeInTheDocument();
+  });
+
+  test('renders with default empty sensor status', () => {
+    const { container } = render(<GridTopology sensorStatus={[]} voltageData={[]} />);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
   });
 });

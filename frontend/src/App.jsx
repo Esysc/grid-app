@@ -336,7 +336,7 @@ function App() {
       {view === 'dashboard' && (
         <>
           <GridStats stats={stats} sensorStatus={sensorStatus} />
-          <GridTopology />
+          <GridTopology sensorStatus={sensorStatus} voltageData={voltageData} />
           <div className="dashboard-grid">
             <div className="chart-container">
               <h2>⚡ Voltage Monitoring</h2>

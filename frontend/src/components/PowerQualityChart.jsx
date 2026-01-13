@@ -17,11 +17,22 @@ const PowerQualityChart = ({ data, dataKey, yAxisLabel, color }) => {
     return <div>No data available</div>;
   }
   
-  // Format timestamp for display
-  const formatData = data.map(item => ({
-    ...item,
-    time: new Date(item.timestamp).toLocaleTimeString()
-  }));
+  // Keep only last 30 data points to avoid axis jitter
+  const recentData = data.slice(-30);
+  
+  // Format timestamp for display - use fixed time format to avoid re-renders
+  const formatData = React.useMemo(() => 
+    recentData.map(item => ({
+      ...item,
+      time: new Date(item.timestamp).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit',
+        hour12: false 
+      })
+    })), 
+    [recentData.length, recentData[recentData.length - 1]?.timestamp]
+  );
 
   // Define thresholds based on data type
   const getThreshold = () => {
@@ -40,6 +51,8 @@ const PowerQualityChart = ({ data, dataKey, yAxisLabel, color }) => {
           dataKey="time" 
           stroke="#a0aec0"
           style={{ fontSize: '12px' }}
+          tick={{ fontSize: 12 }}
+          interval={Math.max(0, Math.floor(formatData.length / 6))}
         />
         <YAxis 
           stroke="#a0aec0"
