@@ -73,12 +73,19 @@ async def lifespan(
     print("✅ GraphQL schema registered")
     print("✅ Authentication enabled")
 
-    # Initialize S3 bucket
-    try:
-        s3_exporter.ensure_bucket_exists()
-        print("✅ S3 bucket initialized")
-    except Exception as e:
-        print(f"⚠️ S3 bucket initialization failed: {e}")
+    # Initialize S3 bucket with retry logic
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            s3_exporter.ensure_bucket_exists()
+            print("✅ S3 bucket initialized")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"⚠️ S3 bucket initialization attempt {attempt + 1} failed, retrying...")
+                await asyncio.sleep(2)
+            else:
+                print(f"⚠️ S3 bucket initialization failed after {max_retries} attempts: {e}")
 
     # Start MQTT consumer in background
     mqtt_task = asyncio.create_task(start_mqtt_consumer())

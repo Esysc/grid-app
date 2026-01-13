@@ -27,27 +27,24 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
     { from: 'transformer-2', to: 'feeder-3' },
   ];
 
-  // Build nodes dynamically from sensor locations; auto-place unknown locations around a circle
+  // Build nodes: always show base layout, then add any unknown sensor locations
   const nodes = useMemo(() => {
+    // Start with all base layout nodes (grid infrastructure)
+    const dynamicNodes = Object.values(baseLayout).map(node => ({ ...node }));
+    
+    // Update sensor types based on actual sensors present
     const uniqueLocations = Array.from(new Set(sensorStatus.map((s) => s.location)));
-
-    // Always include Main Hub even if not present in sensor list
-    const dynamicNodes = [baseLayout['Main Hub']];
-
     const unknownLocations = [];
-
+    
     uniqueLocations.forEach((location) => {
-      if (location === 'Main Hub') return; // already added
-
-      // Derive preferred sensorType from sensors at this location
       const sensorsHere = sensorStatus.filter((s) => s.location === location);
       const hasVoltage = sensorsHere.some((s) => s.sensor_id.startsWith('VS-'));
       const hasPQ = sensorsHere.some((s) => s.sensor_id.startsWith('PQ-'));
       const preferredType = hasVoltage ? 'voltage' : hasPQ ? 'power_quality' : undefined;
-
-      const known = baseLayout[location];
-      if (known) {
-        dynamicNodes.push({ ...known, sensorType: preferredType || known.sensorType });
+      
+      const knownNode = dynamicNodes.find(n => n.label === location);
+      if (knownNode) {
+        knownNode.sensorType = preferredType || knownNode.sensorType;
       } else {
         unknownLocations.push({ location, preferredType });
       }
@@ -86,23 +83,9 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
     return [...filteredBase, ...autoLinks];
   }, [nodes]);
 
-  // Get sensor for a node
-  const getSensorForNode = (nodeLabel, preferredType) => {
-    const sensorsAtLocation = sensorStatus.filter((sensor) => sensor.location === nodeLabel);
-    if (sensorsAtLocation.length === 0) return null;
-    
-    // If we have a preferred type (voltage/power_quality), find matching sensor
-    if (preferredType) {
-      const preferred = sensorsAtLocation.find(s => {
-        if (preferredType === 'voltage') return s.sensor_id.startsWith('VS-');
-        if (preferredType === 'power_quality') return s.sensor_id.startsWith('PQ-');
-        return false;
-      });
-      if (preferred) return preferred;
-    }
-    
-    // Otherwise return first sensor at this location
-    return sensorsAtLocation[0];
+  // Get sensors for a node (all sensors at the location)
+  const getSensorsForNode = (nodeLabel) => {
+    return sensorStatus.filter((sensor) => sensor.location === nodeLabel);
   };
 
   // Get voltage value for sensor
@@ -113,33 +96,33 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
 
   // Determine node styling
   const getNodeColor = (node) => {
-    const sensor = getSensorForNode(node.label, node.sensorType);
+    const sensors = getSensorsForNode(node.label);
     if (node.type === 'hub') return '#ff6b6b';
     if (node.type === 'transformer') return '#ffd700';
-    if (sensor) {
-      return sensor.is_operational ? '#4caf50' : '#ff5252';
+    if (sensors.length > 0) {
+      const anyFault = sensors.some((s) => !s.is_operational);
+      return anyFault ? '#ff5252' : '#4caf50';
     }
     return '#4fc3f7';
   };
 
   const getNodeBorder = (node) => {
-    const sensor = getSensorForNode(node.label, node.sensorType);
-    if (sensor && !sensor.is_operational) return '#ff5252';
+    const sensors = getSensorsForNode(node.label);
+    if (sensors.some((s) => !s.is_operational)) return '#ff5252';
     return '#ffffff';
   };
 
   // SVG node component
   const SVGNode = ({ node }) => {
-    const sensor = getSensorForNode(node.label, node.sensorType);
-    const voltage = sensor ? getVoltageForSensor(sensor.sensor_id) : null;
-    const isFaulty = sensor && !sensor.is_operational;
+    const sensors = getSensorsForNode(node.label);
+    const isFaulty = sensors.some((s) => !s.is_operational);
 
     return (
       <g
         key={node.id}
         className={`svg-node ${isFaulty ? 'faulty-pulse' : ''}`}
-        onClick={() => sensor && setSelectedSensor(sensor)}
-        style={{ cursor: sensor ? 'pointer' : 'default' }}
+        onClick={() => sensors.length > 0 && setSelectedSensor(sensors[0])}
+        style={{ cursor: sensors.length > 0 ? 'pointer' : 'default' }}
       >
         {/* Connection lines will be drawn separately */}
         {/* Node circle */}
@@ -176,27 +159,38 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
           {node.label}
         </text>
 
-        {/* Sensor data if available */}
-        {sensor && (
-          <>
-            <text
-              x={node.x}
-              y={node.y + 4}
-              textAnchor="middle"
-              className="sensor-value"
-              fill="#ffffff"
-              fontSize="11"
-              fontWeight="bold"
-            >
-              {voltage ? `${voltage}V` : sensor.sensor_id}
-            </text>
-            <circle
-              cx={node.x + 20}
-              cy={node.y - 20}
-              r="4"
-              fill={sensor.is_operational ? '#4caf50' : '#ff5252'}
-            />
-          </>
+        {/* Sensor badges (all sensors at this location) */}
+        {sensors.length > 0 && (
+          <g className="sensor-badges">
+            {sensors.slice(0, 4).map((s, idx) => {
+              const voltage = s.sensor_id.startsWith('VS-') ? getVoltageForSensor(s.sensor_id) : null;
+              const badgeY = node.y - 6 + idx * 14;
+              return (
+                <g key={s.sensor_id} transform={`translate(${node.x + 30}, ${badgeY})`}>
+                  <rect
+                    x={-2}
+                    y={-9}
+                    rx={4}
+                    ry={4}
+                    width={70}
+                    height={16}
+                    fill="rgba(30, 144, 255, 0.15)"
+                    stroke={s.is_operational ? '#4caf50' : '#ff5252'}
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={2}
+                    y={2}
+                    className="sensor-value"
+                    fill="#ffffff"
+                    fontSize="10"
+                  >
+                    {s.sensor_id}{voltage ? ` · ${voltage}V` : ''}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
         )}
       </g>
     );
@@ -296,66 +290,51 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
       {selectedSensor && (
         <div className="modal-overlay" onClick={() => setSelectedSensor(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setSelectedSensor(null)}>✕</button>
-            <h3>{selectedSensor.sensor_id}</h3>
-
-            <div className="modal-grid">
-              <div className="modal-section">
-                <label>Location</label>
-                <value>{selectedSensor.location}</value>
-              </div>
-
-              <div className="modal-section">
-                <label>Type</label>
-                <value>{selectedSensor.sensor_type}</value>
-              </div>
-
-              <div className="modal-section">
-                <label>Status</label>
-                <value className={selectedSensor.is_operational ? 'operational' : 'faulty'}>
-                  {selectedSensor.is_operational ? '✅ Operational' : '❌ Faulty'}
-                </value>
-              </div>
-
-              <div className="modal-section">
-                <label>Last Update</label>
-                <value>{selectedSensor.seconds_since_update}s ago</value>
-              </div>
-
-              {selectedSensor.sensor_type === 'voltage' && (
-                <>
-                  {(() => {
-                    const reading = voltageData.find(
-                      (v) => v.sensor_id === selectedSensor.sensor_id
-                    );
-                    return reading ? (
-                      <>
-                        <div className="modal-section">
-                          <label>Voltage L1</label>
-                          <value>{(reading.voltage_l1 || 0).toFixed(2)}V</value>
-                        </div>
-                        <div className="modal-section">
-                          <label>Voltage L2</label>
-                          <value>{(reading.voltage_l2 || 0).toFixed(2)}V</value>
-                        </div>
-                        <div className="modal-section">
-                          <label>Voltage L3</label>
-                          <value>{(reading.voltage_l3 || 0).toFixed(2)}V</value>
-                        </div>
-                        <div className="modal-section">
-                          <label>Frequency</label>
-                          <value>{(reading.frequency || 0).toFixed(2)}Hz</value>
-                        </div>
-                      </>
-                    ) : null;
-                  })()}
-                </>
-              )}
-            </div>
-
-            <button className="modal-close-btn" onClick={() => setSelectedSensor(null)}>
-              Close
+            <button className="modal-close" onClick={() => setSelectedSensor(null)}>
+              ✕
             </button>
+            <h3>Sensor Details</h3>
+            <div className="modal-body">
+              <div className="detail-section">
+                <strong>Sensor ID:</strong> {selectedSensor.sensor_id}
+              </div>
+              <div className="detail-section">
+                <strong>Location:</strong> {selectedSensor.location}
+              </div>
+              <div className="detail-section">
+                <strong>Status:</strong>{' '}
+                <span
+                  style={{
+                    color: selectedSensor.is_operational ? '#4caf50' : '#ff5252',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {selectedSensor.is_operational ? '✅ Operational' : '❌ Faulty'}
+                </span>
+              </div>
+              {selectedSensor.sensor_id.startsWith('VS-') && (() => {
+                const voltage = voltageData.find((v) => v.sensor_id === selectedSensor.sensor_id);
+                return voltage ? (
+                  <>
+                    <div className="detail-section">
+                      <strong>Voltage L1:</strong> {(voltage.voltage_l1 || 0).toFixed(2)}V
+                    </div>
+                    <div className="detail-section">
+                      <strong>Voltage L2:</strong> {(voltage.voltage_l2 || 0).toFixed(2)}V
+                    </div>
+                    <div className="detail-section">
+                      <strong>Voltage L3:</strong> {(voltage.voltage_l3 || 0).toFixed(2)}V
+                    </div>
+                    <div className="detail-section">
+                      <strong>Frequency:</strong> {(voltage.frequency || 0).toFixed(2)} Hz
+                    </div>
+                  </>
+                ) : null;
+              })()}
+              <div className="detail-section">
+                <strong>Last Update:</strong> {selectedSensor.seconds_since_update}s ago
+              </div>
+            </div>
           </div>
         </div>
       )}
