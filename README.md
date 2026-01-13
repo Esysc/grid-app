@@ -24,7 +24,7 @@ This proof-of-concept showcases a distributed system for monitoring electrical g
 
 ## Architecture
 
-```
+```shell
 ┌──────────────────────────┐      ┌──────────────────────────┐      ┌──────────────────┐
 │ React 18 Frontend        │◄────►│ FastAPI Backend v2.0     │◄────►│ TimescaleDB      │
 │ (Vite + Auth + Viz)      │      │ (REST + GraphQL + SSE)   │      │ (Time-series DB) │
@@ -102,6 +102,7 @@ docker-compose down -v
 ### Option 2: Run Frontend + Backend Locally
 
 **Terminal 1 - Backend:**
+
 ```bash
 cd backend
 
@@ -117,6 +118,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Terminal 2 - Frontend:**
+
 ```bash
 cd frontend
 
@@ -133,11 +135,11 @@ The frontend will be available at `http://localhost:5173` (Vite default) and con
 
 | Service | URL | Notes |
 | --------- | ----- | ------------- |
-| **Frontend Dashboard** | http://localhost:3000 (Docker) or http://localhost:5173 (local) | Demo/test credentials: admin/secret |
-| **API Documentation** | http://localhost:8000/docs | Interactive Swagger UI with auth token input |
-| **GraphQL Playground** | http://localhost:8000/graphql | GraphQL IDE with schema explorer |
-| **pgAdmin** | http://localhost:5050 | Database admin (Docker only) |
-| **LocalStack S3** | http://localhost:4566 | S3 API endpoint (Docker only) |
+| **Frontend Dashboard** | <http://localhost:3000> (Docker) or <http://localhost:5173> (local) | Demo/test credentials: admin/secret |
+| **API Documentation** | <http://localhost:8000/docs> | Interactive Swagger UI with auth token input |
+| **GraphQL Playground** | <http://localhost:8000/graphql> | GraphQL IDE with schema explorer |
+| **pgAdmin** | <http://localhost:5050> | Database admin (Docker only) |
+| **LocalStack S3** | <http://localhost:4566> | S3 API endpoint (Docker only) |
 | **MQTT Broker** | localhost:1883 | MQTT protocol (Docker only) |
 
 ## 📊 Dashboard Features
@@ -243,6 +245,7 @@ curl http://localhost:8000/auth/me \
 ### Frontend Authentication
 
 The React app handles authentication automatically:
+
 - Stores JWT token in localStorage after login
 - Includes token in all API request headers
 - Redirects to login page if token is invalid or expired
@@ -251,6 +254,7 @@ The React app handles authentication automatically:
 ### Demo Credentials
 
 For development and testing, default credentials are:
+
 - **Username**: `admin`
 - **Password**: `secret`
 
@@ -439,7 +443,7 @@ npm run type-check  # if script exists
 
 ## 🗂️ Project Structure
 
-```
+```shell
 grid-app/
 ├── backend/
 │   ├── main.py                      # FastAPI app entry point (REST + GraphQL + SSE)
@@ -557,12 +561,14 @@ cd frontend && npm test -- --coverage --run
 ### Test Coverage
 
 **Backend (pytest):**
+
 - Unit tests: Data models, authentication, password hashing, business logic
 - Integration tests: API endpoints, GraphQL queries, S3 export, SSE streams
 - Coverage: Aim for 80%+ on critical paths
 - Test files located in `backend/tests/unit/` and `backend/tests/integration/`
 
 **Frontend (Vitest):**
+
 - Component tests: Rendering, user interactions, state management
 - Integration tests: API calls, authentication flow, data display
 - Coverage: Currently 64.7% statements, 48.61% branches
@@ -571,6 +577,7 @@ cd frontend && npm test -- --coverage --run
 ### Continuous Integration
 
 GitHub Actions pipeline (`.github/workflows/ci-cd.yml`) runs:
+
 - Backend: pytest with type checking (mypy)
 - Frontend: npm test with coverage report
 - Linting: Pre-commit hooks (black, isort, pylint, ESLint)
@@ -610,6 +617,7 @@ cp .env.example .env
 ```
 
 **Database Configuration:**
+
 ```shell
 POSTGRES_USER=griduser              # Database user (default: griduser)
 POSTGRES_PASSWORD=<secure-password> # Strong password for production
@@ -618,6 +626,7 @@ DATABASE_URL=postgresql+asyncpg://griduser:password@timescaledb:5432/grid_monito
 ```
 
 **Application Security:**
+
 ```shell
 JWT_SECRET_KEY=<32-char-random-key>  # Generate: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 JWT_ALGORITHM=HS256                  # JWT signing algorithm
@@ -626,6 +635,7 @@ PYTHONUNBUFFERABLE=1                 # Enable unbuffered Python output
 ```
 
 **MQTT Configuration:**
+
 ```shell
 MQTT_HOST=mosquitto                  # MQTT broker host (Docker) or localhost
 MQTT_PORT=1883                       # MQTT port
@@ -633,6 +643,7 @@ MQTT_TOPIC=grid/sensors/#           # Topic pattern for sensors
 ```
 
 **S3/LocalStack (Development):**
+
 ```shell
 S3_ENDPOINT=http://localhost:4566    # LocalStack S3 endpoint
 S3_BUCKET=grid-monitor-exports       # S3 bucket name
@@ -641,6 +652,7 @@ S3_SECRET_KEY=test
 ```
 
 **⚠️ IMPORTANT**:
+
 - Never commit `.env` to version control (included in `.gitignore`)
 - For production, use strong random passwords and secrets
 - Rotate JWT_SECRET_KEY regularly
@@ -702,6 +714,7 @@ S3_SECRET_KEY=test
 ### Code Style & Standards
 
 **Python:**
+
 - Follow PEP 8 guidelines
 - Use type hints for all function signatures
 - Format code with `black`
@@ -709,6 +722,7 @@ S3_SECRET_KEY=test
 - Lint with `pylint` and type-check with `mypy`
 
 **JavaScript/JSX:**
+
 - Use ES6+ syntax and features
 - Follow React best practices
 - Use functional components with hooks
@@ -716,6 +730,7 @@ S3_SECRET_KEY=test
 - Format code with Prettier (if configured)
 
 **Git Workflow:**
+
 - Use descriptive commit messages
 - Reference issues in commit messages (e.g., "Fixes #123")
 - Keep commits focused on a single feature/fix
@@ -775,7 +790,7 @@ S3_SECRET_KEY=test
 
 | Setting | Default | Notes |
 | ------- | ------- | ----- |
-| **Endpoint** | http://localhost:4566 | LocalStack S3 endpoint |
+| **Endpoint** | <http://localhost:4566> | LocalStack S3 endpoint |
 | **Region** | us-east-1 | AWS region setting |
 | **Bucket** | grid-monitor-exports | S3 bucket for file exports |
 | **Access Key** | test | LocalStack demo credentials |
@@ -812,6 +827,7 @@ This project is provided as-is for demonstration and educational purposes.
 ### Common Issues
 
 **Problem**: Docker containers won't start
+
 ```bash
 # Solution: Check port conflicts
 lsof -i :8000  # Check port 8000
@@ -821,6 +837,7 @@ docker-compose up -d --no-cache  # Rebuild
 ```
 
 **Problem**: Frontend can't connect to backend
+
 ```bash
 # Check proxy configuration in frontend/vite.config.js
 # For Docker: target should be 'http://backend:8000'
@@ -828,6 +845,7 @@ docker-compose up -d --no-cache  # Rebuild
 ```
 
 **Problem**: Database connection error
+
 ```bash
 # Verify database is running
 docker-compose logs timescaledb
@@ -842,6 +860,7 @@ sleep 10  # Wait for initialization
 ```
 
 **Problem**: JWT authentication failing
+
 ```bash
 # Verify JWT_SECRET_KEY is set
 echo $JWT_SECRET_KEY
@@ -853,6 +872,7 @@ localStorage.getItem('accessToken')
 ```
 
 **Problem**: MQTT sensor data not appearing
+
 ```bash
 # Check MQTT broker
 docker-compose logs mosquitto
@@ -869,14 +889,16 @@ mosquitto_sub -h localhost -t "grid/sensors/#"
 - Check [Project Context](instructions/PROJECT_CONTEXT.md) for detailed info
 - Review GitHub Issues for similar problems
 - Check application logs: `docker-compose logs`
-- Read API documentation: http://localhost:8000/docs
+- Read API documentation: <http://localhost:8000/docs>
 
 ## 📝 Version History
 
 ### v2.0.0 (Current)
+
 ✨ **Major Release** - Production-Ready Features
 
 **New Features:**
+
 - JWT authentication with OAuth2 password flow
 - GraphQL API with Strawberry implementation
 - S3 data export with LocalStack integration
@@ -890,6 +912,7 @@ mosquitto_sub -h localhost -t "grid/sensors/#"
 - Grid statistics KPI dashboard cards
 
 **Improvements:**
+
 - Fullwidth grid topology layout optimization
 - Centered topology visualization with responsive design
 - Enhanced error handling and validation
@@ -899,11 +922,13 @@ mosquitto_sub -h localhost -t "grid/sensors/#"
 - Improved documentation and API references
 
 **Breaking Changes:**
+
 - Frontend routing changed (Dashboard, Archives, Logout views)
 - API endpoints now require JWT authentication
 - Database schema optimized for TimescaleDB
 
 ### v1.0.0 (Initial Release)
+
 - REST API with real-time monitoring
 - React dashboard with charts
 - Basic fault detection
