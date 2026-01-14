@@ -9,6 +9,19 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 from typing import cast as typing_cast
 
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from fastapi.security import OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from mqtt_consumer import start_mqtt_consumer, stop_mqtt_consumer
+from sqlalchemy import Float, and_
+from sqlalchemy import func as sa_func
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
+from strawberry.fastapi import GraphQLRouter as _GraphQLRouter
+
 from auth import (
     ALGORITHM,
     SECRET_KEY,
@@ -28,12 +41,7 @@ from database import (
     get_db,
     init_db,
 )
-from fastapi import Depends, FastAPI, HTTPException, Path, Query, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from fastapi.security import OAuth2PasswordRequestForm
 from graphql_schema import schema
-from jose import JWTError, jwt
 from models import (
     FaultEvent,
     HealthCheck,
@@ -42,14 +50,7 @@ from models import (
     SensorStatus,
     VoltageReading,
 )
-from mqtt_consumer import start_mqtt_consumer, stop_mqtt_consumer
 from s3_export import S3Exporter
-from sqlalchemy import Float, and_
-from sqlalchemy import func as sa_func
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
-from strawberry.fastapi import GraphQLRouter as _GraphQLRouter
 
 HOURS_DESC = "Hours of historical data"
 
@@ -489,7 +490,7 @@ async def get_fault_timeline(
     return [FaultEvent.model_validate(f) for f in faults]
 
 
-@app.get("/stats", response_model=SensorStats, tags=["Analytics"])
+@app.get("/sensors/stats", response_model=SensorStats, tags=["Analytics"])
 async def get_sensor_stats(
     db: AsyncSession = Depends(get_db),
     _current_user: User = Depends(get_current_user),

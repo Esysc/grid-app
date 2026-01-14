@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pytest
+
 from models import FaultEvent, PowerQualityMetrics, VoltageReading
 
 

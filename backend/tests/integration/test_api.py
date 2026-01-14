@@ -8,9 +8,10 @@ from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
 import pytest
-from auth import create_access_token
 from fastapi.testclient import TestClient
 from main import app
+
+from auth import create_access_token
 
 
 class VoltagePayload(TypedDict):
@@ -287,12 +288,12 @@ class TestSensorStatsEndpoint:
 
     def test_sensor_stats_unauthorized(self, client: TestClient):
         """Test sensor stats without auth"""
-        response = client.get("/stats")
+        response = client.get("/sensors/stats")
         assert response.status_code == 403
 
     def test_sensor_stats_with_auth(self, client: TestClient, auth_headers: dict[str, str]):
         """Test sensor stats with authentication"""
-        response = client.get("/stats", headers=auth_headers)
+        response = client.get("/sensors/stats", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert "total_sensors" in data

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import './GridTopology.css';
 
-const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
+const GridTopology = ({ sensorStatus = [], voltageData = [], powerQuality = [] }) => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedSensorIndex, setSelectedSensorIndex] = useState(0);
 
@@ -95,6 +95,12 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
     return reading ? (reading.voltage_l1 || 0).toFixed(1) : null;
   };
 
+  // Get power quality value for sensor
+  const getPowerQualityForSensor = (sensorId) => {
+    const reading = powerQuality.find((pq) => pq.sensor_id === sensorId);
+    return reading ? (reading.thd_voltage || 0).toFixed(2) : null;
+  };
+
   // Determine node styling
   const getNodeColor = (node) => {
     const sensors = getSensorsForNode(node.label);
@@ -177,6 +183,8 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
           <g className="sensor-badges">
             {sensors.slice(0, 4).map((s, idx) => {
               const voltage = s.sensor_id.startsWith('VS-') ? getVoltageForSensor(s.sensor_id) : null;
+              const pq = s.sensor_id.startsWith('PQ-') ? getPowerQualityForSensor(s.sensor_id) : null;
+              const displayValue = voltage ? ` · ${voltage}V` : pq ? ` · THD ${pq}%` : '';
               const badgeY = node.y - 6 + idx * 14;
               return (
                 <g key={s.sensor_id} transform={`translate(${node.x + 30}, ${badgeY})`}>
@@ -198,7 +206,7 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
                     fill="#ffffff"
                     fontSize="10"
                   >
-                    {s.sensor_id}{voltage ? ` · ${voltage}V` : ''}
+                    {s.sensor_id}{displayValue}
                   </text>
                 </g>
               );

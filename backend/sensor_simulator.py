@@ -16,6 +16,7 @@ from enum import Enum
 from typing import Any, Dict
 
 import aiomqtt  # pylint: disable=import-error
+
 from data_generator import GridDataGenerator
 
 

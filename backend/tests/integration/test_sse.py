@@ -6,10 +6,11 @@ from datetime import timedelta
 
 import main
 import pytest
-from auth import create_access_token
 from fastapi.testclient import TestClient
 from main import app
 from pytest import MonkeyPatch
+
+from auth import create_access_token
 
 
 @pytest.fixture

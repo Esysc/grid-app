@@ -38,7 +38,15 @@ repos:
     hooks:
       - id: isort
         files: ^backend/.*\.py$
-        args: ['--profile=black', '--line-length=100']
+        args:
+          - '--profile=black'
+          - '--line-length=100'
+          - '-p=database'
+          - '-p=models'
+          - '-p=auth'
+          - '-p=graphql_schema'
+          - '-p=data_generator'
+          - '-p=s3_export'
 
   # Python: flake8 linter
   - repo: https://github.com/pycqa/flake8

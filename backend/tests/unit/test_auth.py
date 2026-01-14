@@ -7,6 +7,9 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from jose import jwt
+from jose.exceptions import ExpiredSignatureError
+
 from auth import (
     ALGORITHM,
     SECRET_KEY,
@@ -21,8 +24,6 @@ from auth import (
     get_user,
     verify_password,
 )
-from jose import jwt
-from jose.exceptions import ExpiredSignatureError
 
 
 class TestPasswordHashing:

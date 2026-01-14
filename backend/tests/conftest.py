@@ -8,10 +8,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict
 
 import pytest
-from auth import create_access_token
-from database import Base, get_db
 from main import app
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from auth import create_access_token
+from database import Base, get_db
 
 
 @pytest.fixture

@@ -6,6 +6,9 @@ import math
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import StaticPool
+
 from auth import (
     authenticate_user,
     create_access_token,
@@ -16,8 +19,6 @@ from auth import (
 from data_generator import GridDataGenerator
 from database import Base
 from models import FaultEvent, PowerQualityMetrics, VoltageReading
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import StaticPool
 
 
 # Test database setup

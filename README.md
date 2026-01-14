@@ -12,6 +12,7 @@ This proof-of-concept showcases a distributed system for monitoring electrical g
 - **Real-time sensor data processing** from voltage and power quality sensors across the grid
 - **Fault detection and alerting** with severity classification (CRITICAL, WARNING, INFO)
 - **Power quality analytics** including Total Harmonic Distortion (THD) monitoring
+- **Network Logs Panel** for debugging API requests with timing and response details
 - **JWT Authentication** for secure API access with OAuth2 password flow
 - **GraphQL API** for complex queries and subscriptions (Strawberry)
 - **S3 Data Export** with LocalStack integration for testing
@@ -213,10 +214,50 @@ The frontend will be available at `http://localhost:5173` (Vite default) and con
 - **Analytics Dashboard**: KPI cards, trend charts, and metrics
 - **Authentication**: Secure JWT-based API access with login/logout
 - **GraphQL Support**: Type-safe queries for advanced data exploration
+- **API Toggle**: Switch between REST and GraphQL APIs seamlessly from the UI
 - **Data Export**: S3 integration for archival and compliance
 - **Time-series Optimization**: TimescaleDB for efficient historical queries
 - **MQTT Integration**: Real-time sensor data injection with simulator
 - **Responsive UI**: Mobile-friendly React dashboard with Vite
+
+### 🔄 REST/GraphQL API Toggle (NEW)
+
+The frontend now supports switching between REST API and GraphQL API modes without requiring code changes or page reloads:
+
+- **Toggle Switch**: Located in the header next to the navigation tabs
+- **Seamless Switching**: Click the toggle button to switch between REST and GraphQL
+- **Persistent Preference**: Your API choice is saved in localStorage
+- **Unified Interface**: Both APIs return identical data structures to components
+- **Real-time Updates**: Data is automatically refetched when switching modes
+- **Status Indicator**: Shows current API mode (REST or GraphQL)
+
+**How it works:**
+- The `DataFetcher` abstraction layer provides a unified interface for both REST and GraphQL
+- GraphQL responses are automatically transformed to match the REST API format
+- No changes needed to React components - they receive the same data structure
+- Perfect for testing, comparing performance, or choosing your preferred API style
+
+### 🌐 Network Logs Panel (NEW)
+
+Real-time network debugging panel for monitoring all API requests and responses:
+
+- **Collapsible Panel**: Fixed at the bottom of the screen, click to expand/collapse
+- **Request Timeline**: All HTTP/GraphQL requests with timestamps and duration
+- **Color-Coded Methods**: GET (blue), POST (green), GraphQL (pink)
+- **Status Indicators**: Success (✓ green), Error (✗ red), Pending (⋯ orange)
+- **Request Details**: Click any log entry to view full request/response payload
+- **Performance Monitoring**: Response times displayed in milliseconds
+- **Error Debugging**: Full error messages and stack traces for failed requests
+- **Request History**: Keeps last 100 requests for analysis
+- **Mode Switching**: Logs clear when switching between REST and GraphQL modes
+- **Production Ready**: Only visible in non-demo mode for debugging
+
+**Features:**
+- JSON syntax highlighting for request/response bodies
+- Scrollable detail views with formatted JSON
+- Filter by request status (success/error)
+- Timestamp with millisecond precision
+- Automatic log rotation (last 100 requests)
 
 ## 🔐 Security & Authentication
 
