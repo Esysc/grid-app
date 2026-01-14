@@ -81,7 +81,7 @@ services:
 
   # LocalStack for AWS services (S3, etc.)
   localstack:
-    image: localstack/localstack:latest@sha256:ab3994e32598a728efae405b6ac2fea4e18b52dcb3ea96c836b2f57858cc0cad
+    image: localstack/localstack:latest@sha256:e23b092934112f3aca64fd859a955c29ff30d296536a16a070969e0d45fbad94
     container_name: grid-localstack
     environment:
       SERVICES: s3
