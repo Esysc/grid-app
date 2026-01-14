@@ -53,17 +53,17 @@
       ]
     },
     {
-      "description": "Limit Python Docker image to 3.13.x",
+      "description": "Limit Python Docker image to 3.12.x",
       "matchDatasources": [
         "docker"
       ],
       "matchPackageNames": [
         "python"
       ],
-      "allowedVersions": "< 3.14"
+      "allowedVersions": "< 3.13"
     },
     {
-      "description": "Limit Python in GitHub Actions to 3.13.x",
+      "description": "Limit Python in GitHub Actions to 3.12.x",
       "matchManagers": [
         "github-actions"
       ],
@@ -73,7 +73,7 @@
       "matchFileNames": [
         ".github/workflows/**"
       ],
-      "allowedVersions": "< 3.14"
+      "allowedVersions": "< 3.13"
     },
     {
       "description": "Group frontend dependencies",
