@@ -238,7 +238,7 @@ const GridTopology = ({ sensorStatus = [], voltageData = [] }) => {
           <svg
             width="900"
             height="520"
-            viewBox="0 0 900 520"
+            viewBox="-50 -30 550 400"
             className="topology-svg"
             preserveAspectRatio="xMidYMid meet"
           >

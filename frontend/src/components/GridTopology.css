@@ -32,16 +32,15 @@
   border: none;
   border-radius: 0;
   background-color: #0b1223;
+  height: 100%;
+  width: 100%;
   display: block;
-  margin: 0 auto;
-  width: 90%;
-  max-width: 800px;
 }
 
 .topology-scroll {
-  overflow: auto;
-  border-radius: 0;
-  border: none;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 4px solid #2ca83a;
   background: #0b1223;
   height: 520px;
   cursor: grab;
@@ -324,6 +323,9 @@
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
+  margin: 10px auto;
+  width: 80%; /* Adjust this value as needed */
+  height: auto; /* Maintain aspect ratio */
 }
 
 .modal-close-btn:hover {
