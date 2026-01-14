@@ -1,16 +1,16 @@
 # Development dependencies for linting, formatting, and testing
-pylint==3.0.3
-flake8==7.0.0
-black==24.1.1
+pylint==3.3.9
+flake8==7.3.0
+black==24.10.0
 isort==5.13.2
-mypy==1.8.0
+mypy==1.19.1
 pytest==7.4.4
-pytest-asyncio==0.23.3
+pytest-asyncio==0.26.0
 pytest-cov==4.1.0
-httpx==0.26.0  # For testing FastAPI endpoints
-aiosqlite==0.19.0
-greenlet==3.0.3
-psycopg2-binary==2.9.9  # PostgreSQL adapter for database testing
-bandit==1.7.6  # Security vulnerability scanner
-pre-commit==3.6.0  # Git hook scripts
+httpx==0.28.1  # For testing FastAPI endpoints
+aiosqlite==0.22.1
+greenlet==3.3.0
+psycopg2-binary==2.9.11  # PostgreSQL adapter for database testing
+bandit==1.9.2  # Security vulnerability scanner
+pre-commit==3.8.0  # Git hook scripts
 # Note: pytest type stubs not available in PyPI; pytest.approx() type warnings are harmless
