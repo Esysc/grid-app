@@ -1,6 +1,6 @@
 # Grid Monitor v2.0
 
-[![GitHub Pages](https://img.shields.io/badge/demo-live-success?logo=github&style=flat-square)](https://esysc.github.io/grid-app/)
+[![GitHub Pages](https://img.shields.io/badge/demo-live-success?logo=github&style=flat-square)](https://Esysc.github.io/grid-app/)
 [![Deploy to Pages](https://github.com/Esysc/grid-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Esysc/grid-app/actions/workflows/ci-cd.yml)
 
 ⚡ A production-grade full-stack grid monitoring and analytics platform with JWT authentication, GraphQL API, real-time S3 export, and interactive SVG-based topology visualization.
@@ -714,7 +714,7 @@ S3_SECRET_KEY=test
 ### External Resources
 
 - **GitHub Repository**: <https://github.com/Esysc/grid-app>
-- **Live Demo**: <https://esysc.github.io/grid-app/>
+- **Live Demo**: <https://Esysc.github.io/grid-app/>
 - **Issues & Discussions**: GitHub Issues tab
 
 ## 🤝 Contributing
