@@ -63,6 +63,16 @@
       "allowedVersions": "< 3.13"
     },
     {
+      "description": "Limit bcrypt to 3.x for passlib 1.7.4 compatibility",
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchPackageNames": [
+        "bcrypt"
+      ],
+      "allowedVersions": "< 4.0.0"
+    },
+    {
       "description": "Limit Python in GitHub Actions to 3.12.x",
       "matchManagers": [
         "github-actions"
@@ -74,6 +84,16 @@
         ".github/workflows/**"
       ],
       "allowedVersions": "< 3.13"
+    },
+    {
+      "description": "Limit bcrypt to 3.x for passlib 1.7.4 compatibility",
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchPackageNames": [
+        "bcrypt"
+      ],
+      "allowedVersions": "< 4.0.0"
     },
     {
       "description": "Group frontend dependencies",
