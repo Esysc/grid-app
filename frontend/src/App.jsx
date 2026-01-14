@@ -11,11 +11,9 @@ import DemoDataButton from './components/DemoDataButton';
 
 function App() {
   const isPages =
-    typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+    globalThis.window?.location.hostname?.endsWith('github.io') ?? false;
   const DEMO =
-    typeof import.meta.env.VITE_DEMO_MODE !== 'undefined'
-      ? import.meta.env.VITE_DEMO_MODE === 'true'
-      : isPages;
+    import.meta.env.VITE_DEMO_MODE === 'true' || isPages;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -370,7 +368,7 @@ function App() {
                     return (
                       <div
                         key={sensor.sensor_id}
-                        className={`sensor-detail-item ${!sensor.is_operational ? 'faulty' : ''}`}
+                        className={`sensor-detail-item ${sensor.is_operational ? '' : 'faulty'}`}
                       >
                         <div className="detail-header">
                           <span className="status-indicator" style={{
