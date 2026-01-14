@@ -2,11 +2,10 @@
 GraphQL schema for Grid Monitoring API
 """
 
-# pylint: disable=not-callable,too-many-positional-arguments,redefined-builtin
-# SQLAlchemy func creates callables dynamically, and Strawberry types need many fields
+# pylint: disable=not-callable  # SQLAlchemy func creates callables dynamically
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional
+from typing import Any, AsyncGenerator, List, Optional, cast
 
 import strawberry
 from database import FaultEventDB, PowerQualityDB, VoltageReadingDB
@@ -15,10 +14,6 @@ from sqlalchemy import func as sa_func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from strawberry.types import Info
-
-# ==============================================================================
-# STEP 1: ENHANCED OUTPUT TYPES WITH COMPLETE DATA
-# ==============================================================================
 
 
 @strawberry.type
@@ -33,26 +28,6 @@ class VoltageReading:
     voltage_l3: float
     frequency: float
     timestamp: datetime
-
-    def __init__(
-        self,
-        id: int,
-        sensor_id: str,
-        location: str,
-        voltage_l1: float,
-        voltage_l2: float,
-        voltage_l3: float,
-        frequency: float,
-        timestamp: datetime,
-    ) -> None:  # pylint: disable=redefined-builtin
-        self.id = id
-        self.sensor_id = sensor_id
-        self.location = location
-        self.voltage_l1 = voltage_l1
-        self.voltage_l2 = voltage_l2
-        self.voltage_l3 = voltage_l3
-        self.frequency = frequency
-        self.timestamp = timestamp
 
 
 @strawberry.type
@@ -69,28 +44,6 @@ class PowerQuality:
     flicker_severity: float
     timestamp: datetime
 
-    def __init__(
-        self,
-        id: int,
-        sensor_id: str,
-        location: str,
-        thd_voltage: float,
-        thd_current: float,
-        power_factor: float,
-        voltage_imbalance: float,
-        flicker_severity: float,
-        timestamp: datetime,
-    ) -> None:  # pylint: disable=redefined-builtin
-        self.id = id
-        self.sensor_id = sensor_id
-        self.location = location
-        self.thd_voltage = thd_voltage
-        self.thd_current = thd_current
-        self.power_factor = power_factor
-        self.voltage_imbalance = voltage_imbalance
-        self.flicker_severity = flicker_severity
-        self.timestamp = timestamp
-
 
 @strawberry.type
 class FaultEvent:
@@ -106,28 +59,6 @@ class FaultEvent:
     resolved: bool
     resolved_at: Optional[datetime]
 
-    def __init__(
-        self,
-        id: int,
-        event_id: str,
-        severity: str,
-        event_type: str,
-        location: str,
-        timestamp: datetime,
-        duration_ms: int,
-        resolved: bool,
-        resolved_at: Optional[datetime],
-    ) -> None:  # pylint: disable=redefined-builtin
-        self.id = id
-        self.event_id = event_id
-        self.severity = severity
-        self.event_type = event_type
-        self.location = location
-        self.timestamp = timestamp
-        self.duration_ms = duration_ms
-        self.resolved = resolved
-        self.resolved_at = resolved_at
-
 
 @strawberry.type
 class SensorStats:
@@ -141,28 +72,46 @@ class SensorStats:
     min_voltage: float
     max_voltage: float
 
-    def __init__(
-        self,
-        total_sensors: int,
-        active_sensors: int,
-        fault_count_24h: int,
-        violation_count_24h: int,
-        avg_voltage: float,
-        min_voltage: float,
-        max_voltage: float,
-    ) -> None:
-        self.total_sensors = total_sensors
-        self.active_sensors = active_sensors
-        self.fault_count_24h = fault_count_24h
-        self.violation_count_24h = violation_count_24h
-        self.avg_voltage = avg_voltage
-        self.min_voltage = min_voltage
-        self.max_voltage = max_voltage
-
 
 # ==============================================================================
 # STEP 2: INPUT TYPES FOR MUTATIONS
 # ==============================================================================
+
+
+@strawberry.input
+class TimeRangeFilter:
+    """Filter for time-based queries"""
+
+    hours: int = 24
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+
+@strawberry.input
+class VoltageReadingFilter:
+    """Filter for voltage reading queries"""
+
+    sensor_id: Optional[str] = None
+    time_range: Optional[TimeRangeFilter] = None
+    limit: int = 10
+
+
+@strawberry.input
+class PowerQualityFilter:
+    """Filter for power quality queries"""
+
+    sensor_id: Optional[str] = None
+    time_range: Optional[TimeRangeFilter] = None
+    limit: int = 10
+
+
+@strawberry.input
+class FaultEventFilter:
+    """Filter for fault event queries"""
+
+    severity: Optional[str] = None
+    time_range: Optional[TimeRangeFilter] = None
+    limit: int = 10
 
 
 @strawberry.input
@@ -217,13 +166,6 @@ class MutationResult:
     message: str
     id: Optional[int] = None
 
-    def __init__(
-        self, success: bool, message: str, id: Optional[int] = None
-    ) -> None:  # pylint: disable=redefined-builtin
-        self.success = success
-        self.message = message
-        self.id = id
-
 
 # ==============================================================================
 # QUERIES WITH COMPLETE DATA AND ADVANCED FILTERING
@@ -241,13 +183,7 @@ class Query:
 
     @strawberry.field
     async def voltage_readings(
-        self,
-        info: Info[Any, Any],
-        limit: int = 10,
-        sensor_id: Optional[str] = None,
-        hours: int = 24,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        self, info: Info[Any, Any], options: VoltageReadingFilter
     ) -> List[VoltageReading]:
         """Get voltage readings with optional filtering by time range and sensor"""
         db: AsyncSession = info.context["db"]
@@ -256,46 +192,37 @@ class Query:
         query = select(VoltageReadingDB).order_by(VoltageReadingDB.timestamp.desc())
 
         # Apply time range filter
-        if start_date is not None and end_date is not None:
-            query = query.where(
-                (VoltageReadingDB.timestamp >= start_date)
-                & (VoltageReadingDB.timestamp <= end_date)
-            )
+        if options.time_range:
+            if (
+                options.time_range.start_date is not None
+                and options.time_range.end_date is not None
+            ):
+                query = query.where(
+                    (VoltageReadingDB.timestamp >= options.time_range.start_date)
+                    & (VoltageReadingDB.timestamp <= options.time_range.end_date)
+                )
+            else:
+                cutoff_time = datetime.now(timezone.utc) - timedelta(hours=options.time_range.hours)
+                query = query.where(VoltageReadingDB.timestamp >= cutoff_time)
         else:
-            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
             query = query.where(VoltageReadingDB.timestamp >= cutoff_time)
 
         # Apply sensor filter
-        if sensor_id:
-            query = query.where(VoltageReadingDB.sensor_id == sensor_id)
+        if options.sensor_id:
+            query = query.where(VoltageReadingDB.sensor_id == options.sensor_id)
 
-        query = query.limit(limit)
+        query = query.limit(options.limit)
 
         result = await db.execute(query)
         readings: List[VoltageReading] = []
         for row in result.scalars():
-            reading = VoltageReading(
-                id=row.id,
-                sensor_id=row.sensor_id,
-                location=row.location,
-                voltage_l1=row.voltage_l1,
-                voltage_l2=row.voltage_l2,
-                voltage_l3=row.voltage_l3,
-                frequency=row.frequency,
-                timestamp=row.timestamp,
-            )
-            readings.append(reading)
+            readings.append(cast(VoltageReading, row))
         return readings
 
     @strawberry.field
     async def power_quality(
-        self,
-        info: Info[Any, Any],
-        limit: int = 10,
-        sensor_id: Optional[str] = None,
-        hours: int = 24,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        self, info: Info[Any, Any], options: PowerQualityFilter
     ) -> List[PowerQuality]:
         """Get power quality data with optional filtering"""
         db: AsyncSession = info.context["db"]
@@ -304,46 +231,37 @@ class Query:
         query = select(PowerQualityDB).order_by(PowerQualityDB.timestamp.desc())
 
         # Apply time range filter
-        if start_date is not None and end_date is not None:
-            query = query.where(
-                (PowerQualityDB.timestamp >= start_date) & (PowerQualityDB.timestamp <= end_date)
-            )
+        if options.time_range:
+            if (
+                options.time_range.start_date is not None
+                and options.time_range.end_date is not None
+            ):
+                query = query.where(
+                    (PowerQualityDB.timestamp >= options.time_range.start_date)
+                    & (PowerQualityDB.timestamp <= options.time_range.end_date)
+                )
+            else:
+                cutoff_time = datetime.now(timezone.utc) - timedelta(hours=options.time_range.hours)
+                query = query.where(PowerQualityDB.timestamp >= cutoff_time)
         else:
-            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
             query = query.where(PowerQualityDB.timestamp >= cutoff_time)
 
         # Apply sensor filter
-        if sensor_id:
-            query = query.where(PowerQualityDB.sensor_id == sensor_id)
+        if options.sensor_id:
+            query = query.where(PowerQualityDB.sensor_id == options.sensor_id)
 
-        query = query.limit(limit)
+        query = query.limit(options.limit)
 
         result = await db.execute(query)
         pqs: List[PowerQuality] = []
         for row in result.scalars():
-            pq = PowerQuality(
-                id=row.id,
-                sensor_id=row.sensor_id,
-                location=row.location,
-                thd_voltage=row.thd_voltage,
-                thd_current=row.thd_current,
-                power_factor=row.power_factor,
-                voltage_imbalance=row.voltage_imbalance,
-                flicker_severity=row.flicker_severity,
-                timestamp=row.timestamp,
-            )
-            pqs.append(pq)
+            pqs.append(cast(PowerQuality, row))
         return pqs
 
     @strawberry.field
     async def fault_events(
-        self,
-        info: Info[Any, Any],
-        limit: int = 10,
-        severity: Optional[str] = None,
-        hours: int = 24,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        self, info: Info[Any, Any], options: FaultEventFilter
     ) -> List[FaultEvent]:
         """Get fault events with optional filtering by severity and time range"""
         db: AsyncSession = info.context["db"]
@@ -351,24 +269,32 @@ class Query:
         query = select(FaultEventDB).order_by(FaultEventDB.timestamp.desc())
 
         # Apply time range filter
-        if start_date is not None and end_date is not None:
-            query = query.where(
-                (FaultEventDB.timestamp >= start_date) & (FaultEventDB.timestamp <= end_date)
-            )
+        if options.time_range:
+            if (
+                options.time_range.start_date is not None
+                and options.time_range.end_date is not None
+            ):
+                query = query.where(
+                    (FaultEventDB.timestamp >= options.time_range.start_date)
+                    & (FaultEventDB.timestamp <= options.time_range.end_date)
+                )
+            else:
+                cutoff_time = datetime.now(timezone.utc) - timedelta(hours=options.time_range.hours)
+                query = query.where(FaultEventDB.timestamp >= cutoff_time)
         else:
-            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
             query = query.where(FaultEventDB.timestamp >= cutoff_time)
 
         # Apply severity filter
-        if severity:
-            query = query.where(FaultEventDB.severity == severity)
+        if options.severity:
+            query = query.where(FaultEventDB.severity == options.severity)
 
-        query = query.limit(limit)
+        query = query.limit(options.limit)
 
         result = await db.execute(query)
         faults: List[FaultEvent] = []
         for row in result.scalars():
-            fault = FaultEvent(
+            fault = FaultEvent(  # type: ignore[call-arg]
                 id=row.id,
                 event_id=f"EVT-{row.id}",
                 severity=row.severity,
@@ -436,7 +362,7 @@ class Query:
         violation_result = await db.execute(violation_query)
         violation_count_24h = violation_result.scalar() or 0
 
-        return SensorStats(
+        return SensorStats(  # type: ignore[call-arg]
             total_sensors=total_sensors,
             active_sensors=active_sensors,
             fault_count_24h=fault_count_24h,
@@ -475,12 +401,14 @@ class Mutation:
             db.add(db_reading)
             await db.commit()
             await db.refresh(db_reading)
-            return MutationResult(
+            return MutationResult(  # type: ignore[call-arg]
                 success=True, message="Voltage reading ingested", id=db_reading.id
             )
         except Exception as error:  # pylint: disable=broad-except
             await db.rollback()
-            return MutationResult(success=False, message=f"Error: {str(error)}")
+            return MutationResult(  # type: ignore[call-arg]
+                success=False, message=f"Error: {str(error)}"
+            )
 
     @strawberry.mutation
     async def ingest_power_quality(
@@ -502,10 +430,16 @@ class Mutation:
             db.add(db_pq)
             await db.commit()
             await db.refresh(db_pq)
-            return MutationResult(success=True, message="Power quality data ingested", id=db_pq.id)
+            return MutationResult(  # type: ignore[call-arg]
+                success=True,
+                message="Power quality data ingested",
+                id=db_pq.id,
+            )
         except Exception as error:  # pylint: disable=broad-except
             await db.rollback()
-            return MutationResult(success=False, message=f"Error: {str(error)}")
+            return MutationResult(  # type: ignore[call-arg]
+                success=False, message=f"Error: {str(error)}"
+            )
 
     @strawberry.mutation
     async def create_fault_event(
@@ -526,10 +460,14 @@ class Mutation:
             db.add(db_fault)
             await db.commit()
             await db.refresh(db_fault)
-            return MutationResult(success=True, message="Fault event created", id=db_fault.id)
+            return MutationResult(  # type: ignore[call-arg]
+                success=True, message="Fault event created", id=db_fault.id
+            )
         except Exception as error:  # pylint: disable=broad-except
             await db.rollback()
-            return MutationResult(success=False, message=f"Error: {str(error)}")
+            return MutationResult(  # type: ignore[call-arg]
+                success=False, message=f"Error: {str(error)}"
+            )
 
 
 # ==============================================================================
@@ -544,7 +482,7 @@ class Subscription:
     @strawberry.subscription
     async def voltage_reading_updated(
         self, sensor_id: Optional[str] = None
-    ) -> Any:  # Returns AsyncGenerator[VoltageReading, None]
+    ) -> AsyncGenerator[VoltageReading, None]:
         """Subscribe to voltage reading updates"""
         # Note: This requires WebSocket connection and event streaming infrastructure
         # Implementation requires message queue or event bus (Redis, RabbitMQ, etc.)
@@ -555,7 +493,7 @@ class Subscription:
             # async for message in event_bus.subscribe('voltage_readings'):
             #     if sensor_id is None or message.sensor_id == sensor_id:
             #         yield message
-            yield VoltageReading(
+            yield VoltageReading(  # type: ignore[call-arg]
                 id=0,
                 sensor_id=sensor_id or "unknown",
                 location="pending",
@@ -571,13 +509,13 @@ class Subscription:
     @strawberry.subscription
     async def power_quality_updated(
         self, sensor_id: Optional[str] = None
-    ) -> Any:  # Returns AsyncGenerator[PowerQuality, None]
+    ) -> AsyncGenerator[PowerQuality, None]:
         """Subscribe to power quality updates"""
         # Note: This requires WebSocket connection and event streaming infrastructure
         # Implementation requires message queue or event bus (Redis, RabbitMQ, etc.)
         try:
             # Placeholder: In production, subscribe to message queue
-            yield PowerQuality(
+            yield PowerQuality(  # type: ignore[call-arg]
                 id=0,
                 sensor_id=sensor_id or "unknown",
                 location="pending",
@@ -594,13 +532,13 @@ class Subscription:
     @strawberry.subscription
     async def fault_occurred(
         self, severity: Optional[str] = None
-    ) -> Any:  # Returns AsyncGenerator[FaultEvent, None]
+    ) -> AsyncGenerator[FaultEvent, None]:
         """Subscribe to fault event notifications"""
         # Note: This requires WebSocket connection and event streaming infrastructure
         # Implementation requires message queue or event bus (Redis, RabbitMQ, etc.)
         try:
             # Placeholder: In production, subscribe to message queue
-            yield FaultEvent(
+            yield FaultEvent(  # type: ignore[call-arg]
                 id=0,
                 event_id="EVT-0",
                 severity=severity or "unknown",
