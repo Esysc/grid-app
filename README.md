@@ -213,10 +213,28 @@ The frontend will be available at `http://localhost:5173` (Vite default) and con
 - **Analytics Dashboard**: KPI cards, trend charts, and metrics
 - **Authentication**: Secure JWT-based API access with login/logout
 - **GraphQL Support**: Type-safe queries for advanced data exploration
+- **API Toggle**: Switch between REST and GraphQL APIs seamlessly from the UI
 - **Data Export**: S3 integration for archival and compliance
 - **Time-series Optimization**: TimescaleDB for efficient historical queries
 - **MQTT Integration**: Real-time sensor data injection with simulator
 - **Responsive UI**: Mobile-friendly React dashboard with Vite
+
+### 🔄 REST/GraphQL API Toggle (NEW)
+
+The frontend now supports switching between REST API and GraphQL API modes without requiring code changes or page reloads:
+
+- **Toggle Switch**: Located in the header next to the navigation tabs
+- **Seamless Switching**: Click the toggle button to switch between REST and GraphQL
+- **Persistent Preference**: Your API choice is saved in localStorage
+- **Unified Interface**: Both APIs return identical data structures to components
+- **Real-time Updates**: Data is automatically refetched when switching modes
+- **Status Indicator**: Shows current API mode (REST or GraphQL)
+
+**How it works:**
+- The `DataFetcher` abstraction layer provides a unified interface for both REST and GraphQL
+- GraphQL responses are automatically transformed to match the REST API format
+- No changes needed to React components - they receive the same data structure
+- Perfect for testing, comparing performance, or choosing your preferred API style
 
 ## 🔐 Security & Authentication
 

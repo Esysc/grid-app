@@ -8,6 +8,8 @@ import ExportMenu from './components/ExportMenu';
 import Archives from './components/Archives';
 import DemoBanner from './components/DemoBanner';
 import DemoDataButton from './components/DemoDataButton';
+import { DataFetcher } from './api/dataFetcher';
+import { useApiToggle } from './hooks/useApiToggle';
 
 function App() {
   const isPages =
@@ -26,6 +28,8 @@ function App() {
   const [view, setView] = useState('dashboard');
   const pollingRef = useRef(null);
   const eventSourceRef = useRef(null);
+  const dataFetcherRef = useRef(null);
+  const { useGraphQL, toggleApi, apiMode } = useApiToggle();
 
   useEffect(() => {
     // Check if user is already logged in (token in localStorage)
@@ -52,6 +56,19 @@ function App() {
       }
     };
   }, []);
+
+  // Update DataFetcher mode and refetch data when API mode changes
+  useEffect(() => {
+    if (dataFetcherRef.current && accessToken && !DEMO) {
+      dataFetcherRef.current.setMode(useGraphQL);
+      // Refetch all data with new API mode
+      fetchVoltage();
+      fetchPowerQuality();
+      fetchFaults();
+      fetchStats();
+      fetchSensorStatus();
+    }
+  }, [useGraphQL]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -143,21 +160,24 @@ function App() {
       return;
     }
 
-    fetchFaults(token);
-    fetchPowerQuality(token);
-    fetchVoltage(token);
-    fetchStats(token);
-    fetchSensorStatus(token);
+    // Initialize DataFetcher with current token and API mode
+    dataFetcherRef.current = new DataFetcher(token, useGraphQL);
+
+    fetchFaults();
+    fetchPowerQuality();
+    fetchVoltage();
+    fetchStats();
+    fetchSensorStatus();
 
     // Poll for real-time updates every 5 seconds (matching MQTT publishing rate)
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
     }
     pollingRef.current = setInterval(() => {
-      fetchVoltage(token);
-      fetchPowerQuality(token);
-      fetchSensorStatus(token);
-      fetchStats(token);
+      fetchVoltage();
+      fetchPowerQuality();
+      fetchSensorStatus();
+      fetchStats();
     }, 5000);
 
     // Connect to SSE stream for real-time push updates (pass token in query string)
@@ -201,93 +221,63 @@ function App() {
     }
   };
 
-  const fetchFaults = async (token) => {
+  const fetchFaults = async () => {
     try {
-      const response = await fetch('/api/faults/recent', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.status === 401) {
-        handleTokenExpired();
-        return;
-      }
-      if (response.ok) {
-        const data = await response.json();
-        setRecentFaults(data);
-      }
+      const data = await dataFetcherRef.current.fetchFaults(10);
+      setRecentFaults(data);
     } catch (error) {
       console.error('Error fetching faults:', error);
+      if (error.message === 'TOKEN_EXPIRED') {
+        handleTokenExpired();
+      }
     }
   };
 
-  const fetchPowerQuality = async (token) => {
+  const fetchPowerQuality = async () => {
     try {
-      const response = await fetch('/api/sensors/power-quality?limit=20', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.status === 401) {
-        handleTokenExpired();
-        return;
-      }
-      if (response.ok) {
-        const data = await response.json();
-        setPowerQuality(data);
-      }
+      const data = await dataFetcherRef.current.fetchPowerQuality(20);
+      setPowerQuality(data);
     } catch (error) {
       console.error('Error fetching power quality:', error);
+      if (error.message === 'TOKEN_EXPIRED') {
+        handleTokenExpired();
+      }
     }
   };
 
-  const fetchVoltage = async (token) => {
+  const fetchVoltage = async () => {
     try {
-      const response = await fetch('/api/sensors/voltage?limit=30', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.status === 401) {
-        handleTokenExpired();
-        return;
-      }
-      if (response.ok) {
-        const data = await response.json();
-        setVoltageData(data);
-      }
+      const data = await dataFetcherRef.current.fetchVoltage(30);
+      setVoltageData(data);
     } catch (error) {
       console.error('Error fetching voltage:', error);
+      if (error.message === 'TOKEN_EXPIRED') {
+        handleTokenExpired();
+      }
     }
   };
 
-  const fetchStats = async (token) => {
+  const fetchStats = async () => {
     try {
-      const response = await fetch('/api/stats', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.status === 401) {
-        handleTokenExpired();
-        return;
-      }
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
+      const data = await dataFetcherRef.current.fetchStats();
+      setStats(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
+      if (error.message === 'TOKEN_EXPIRED') {
+        handleTokenExpired();
+      }
     }
   };
 
-  const fetchSensorStatus = async (token) => {
+  const fetchSensorStatus = async () => {
     try {
-      const response = await fetch('/api/sensors/status', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.status === 401) {
-        handleTokenExpired();
-        return;
-      }
-      if (response.ok) {
-        const data = await response.json();
-        setSensorStatus(data);
-      }
+      const data = await dataFetcherRef.current.fetchSensorStatus();
+      setSensorStatus(data);
     } catch (error) {
       console.error('Error fetching sensor status:', error);
+      if (error.message === 'TOKEN_EXPIRED') {
+        handleTokenExpired();
+      }
     }
   };
 
@@ -359,6 +349,23 @@ function App() {
               Archives
             </button>
           </nav>
+          <div className="api-toggle">
+            <span className="api-mode-label">API Mode:</span>
+            <button 
+              onClick={() => !useGraphQL && toggleApi()} 
+              className={`toggle-btn ${!useGraphQL ? 'active' : ''}`}
+              title="REST API"
+            >
+              REST
+            </button>
+            <button 
+              onClick={() => useGraphQL && toggleApi()} 
+              className={`toggle-btn ${useGraphQL ? 'active' : ''}`}
+              title="GraphQL API"
+            >
+              GraphQL
+            </button>
+          </div>
           {!DEMO && isAuthenticated && <DemoDataButton token={accessToken} />}
           <ExportMenu token={accessToken} onViewArchives={() => setView('archives')} onTokenExpired={handleTokenExpired} />
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
