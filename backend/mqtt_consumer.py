@@ -18,9 +18,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 
 import aiomqtt  # pylint: disable=import-error
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from database import get_db
 from models import PowerQualityMetrics, VoltageReading
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class MQTTConsumer:

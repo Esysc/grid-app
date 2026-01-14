@@ -8,9 +8,10 @@ from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
 import pytest
-from auth import create_access_token
 from fastapi.testclient import TestClient
 from main import app
+
+from auth import create_access_token
 
 
 class VoltagePayload(TypedDict):
