@@ -144,7 +144,7 @@ class TestAuthenticationEndpoints:
     def test_get_current_user_profile_unauthorized(self, client: TestClient):
         """Test getting current user profile without auth"""
         response = client.get("/auth/me")
-        assert response.status_code == 403  # Forbidden, no auth header
+        assert response.status_code == 401  # Unauthorized, no auth header
 
     def test_get_current_user_profile_invalid_token(self, client: TestClient):
         """Test getting current user profile with invalid token"""
@@ -159,7 +159,7 @@ class TestVoltageReadingsEndpoint:
     def test_voltage_readings_unauthorized(self, client: TestClient):
         """Test voltage readings without auth"""
         response = client.get("/sensors/voltage")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_voltage_readings_with_auth(self, client: TestClient, auth_headers: dict[str, str]):
         """Test voltage readings with authentication"""
@@ -205,7 +205,7 @@ class TestPowerQualityEndpoint:
     def test_power_quality_unauthorized(self, client: TestClient):
         """Test power quality without auth"""
         response = client.get("/sensors/power-quality")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_power_quality_with_auth(self, client: TestClient, auth_headers: dict[str, str]):
         """Test power quality with authentication"""
@@ -235,7 +235,7 @@ class TestFaultsEndpoints:
     def test_recent_faults_unauthorized(self, client: TestClient):
         """Test recent faults without auth"""
         response = client.get("/faults/recent")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_recent_faults_with_auth(self, client: TestClient, auth_headers: dict[str, str]):
         """Test recent faults with authentication"""
@@ -261,7 +261,7 @@ class TestFaultsEndpoints:
     def test_fault_timeline_unauthorized(self, client: TestClient):
         """Test fault timeline without auth"""
         response = client.get("/faults/timeline")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_fault_timeline_with_auth(self, client: TestClient, auth_headers: dict[str, str]):
         """Test fault timeline with authentication"""
@@ -289,7 +289,7 @@ class TestSensorStatsEndpoint:
     def test_sensor_stats_unauthorized(self, client: TestClient):
         """Test sensor stats without auth"""
         response = client.get("/sensors/stats")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_sensor_stats_with_auth(self, client: TestClient, auth_headers: dict[str, str]):
         """Test sensor stats with authentication"""
@@ -316,7 +316,7 @@ class TestIngestEndpoints:
             "frequency": 50.0,
         }
         response = client.post("/sensors/voltage", json=payload)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_ingest_voltage_with_auth(self, client: TestClient, auth_headers: dict[str, str]):
         """Test voltage ingestion with authentication"""

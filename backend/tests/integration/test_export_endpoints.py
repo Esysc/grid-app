@@ -189,19 +189,19 @@ class TestExportEndpoints:
         """Test that export endpoints require valid JWT token"""
         response = client.post("/export/voltage")
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_list_exports_requires_authentication(self, client: TestClient):
         """Test that list endpoint requires valid JWT token"""
         response = client.get("/export/list")
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_presigned_url_requires_authentication(self, client: TestClient):
         """Test that presigned URL endpoint requires valid JWT token"""
         response = client.get("/export/exports/test.json")
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_export_voltage_format_parameter(
         self, client: TestClient, auth_headers: dict[str, str]
