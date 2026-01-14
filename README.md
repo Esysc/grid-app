@@ -251,14 +251,14 @@ The React app handles authentication automatically:
 - Redirects to login page if token is invalid or expired
 - Supports demo mode (no auth required) for GitHub Pages deployment
 
-### Demo Credentials
+### Security Best Practices
 
-For development and testing, default credentials are:
-
-- **Username**: `admin`
-- **Password**: `secret`
-
-⚠️ **Never use demo credentials in production**. Generate strong, unique credentials via your environment configuration.
+- **Demo Credentials** (development only): Username `admin`, Password `secret`
+- **Production**: Never use demo credentials—generate strong, unique credentials
+- **Token Expiration**: Configure via `JWT_EXPIRATION_HOURS` environment variable
+- **Secret Key**: Use 32+ character random string, rotate regularly
+- **HTTPS**: Required in production to protect tokens in transit
+- **Token Storage**: Currently using localStorage (consider sessionStorage for higher security)
 
 ## 📈 API Endpoints
 
@@ -340,7 +340,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Install dev dependencies (optional)
+# Install dev dependencies (optional for testing/linting)
 pip install -r requirements-dev.txt
 
 # Run development server with auto-reload
@@ -512,17 +512,6 @@ grid-app/
 ├── mqtt/
 │   └── sensor_simulator.py          # MQTT sensor data generator (external service)
 │
-├── instructions/
-│   ├── PROJECT_CONTEXT.md           # Comprehensive project documentation
-│   ├── IMPLEMENTATION_SUMMARY.md    # Feature implementation details
-│   ├── MQTT_SENSOR_SIMULATOR.md     # MQTT simulator setup & usage guide
-│   ├── GRAPHQL_PROPOSAL.md          # GraphQL architecture & usage
-│   ├── EXPORT_AND_ARCHIVE_FEATURES.md  # Export & archive feature guide
-│   ├── DEMO_DATA_AND_SENSOR_INTEGRATION.md  # Demo data setup
-│   ├── UNIT_TESTS_PROPOSAL.md       # Testing strategy
-│   ├── LINTING_FIXES.md             # Code quality guidelines
-│   └── context.md                   # Additional context & references
-│
 ├── .github/
 │   └── workflows/
 │       └── ci-cd.yml                # GitHub Actions CI/CD pipeline
@@ -672,27 +661,16 @@ S3_SECRET_KEY=test
 
 ## 📚 Documentation & Resources
 
-### Official Documentation
+### Live API Documentation
 
-- [**API Documentation (Swagger UI)**](http://localhost:8000/docs) - Interactive API documentation with try-it-out functionality
-- [**GraphQL Playground**](http://localhost:8000/graphql) - GraphQL IDE with schema introspection
-- [**Project Context**](instructions/PROJECT_CONTEXT.md) - Comprehensive project overview and technical details
+- [**API Documentation (Swagger UI)**](http://localhost:8000/docs) - Interactive API documentation (after starting backend)
+- [**GraphQL Playground**](http://localhost:8000/graphql) - GraphQL IDE with schema introspection (after starting backend)
 
-### Implementation Guides
+### Reference Documentation
 
-- [**MQTT Sensor Simulator Guide**](instructions/MQTT_SENSOR_SIMULATOR.md) - Setup and usage of MQTT-based sensor data generation
-- [**GraphQL Implementation**](instructions/GRAPHQL_PROPOSAL.md) - GraphQL schema, queries, and mutations
-- [**Data Export & Archives**](instructions/EXPORT_AND_ARCHIVE_FEATURES.md) - S3 export, file management, and historical data access
-- [**Demo Data Integration**](instructions/DEMO_DATA_AND_SENSOR_INTEGRATION.md) - Sensor simulator setup and demo mode
-- [**Testing Strategy**](instructions/UNIT_TESTS_PROPOSAL.md) - Test coverage, fixtures, and best practices
-- [**Implementation Summary**](instructions/IMPLEMENTATION_SUMMARY.md) - Feature-by-feature implementation details
+- [**Electrical Metrics Reference**](ELECTRICAL_METRICS_REFERENCE.md) - Grid monitoring terminology, voltage standards, power quality metrics, and harmonic analysis
 
-### Reference
-
-- [**Electrical Metrics Reference**](ELECTRICAL_METRICS_REFERENCE.md) - Grid monitoring terminology and electrical standards
-- [**Code Quality Standards**](instructions/LINTING_FIXES.md) - Linting rules, formatting, and pre-commit hooks
-
-### Quick Links
+### External Resources
 
 - **GitHub Repository**: <https://github.com/Esysc/grid-app>
 - **Live Demo**: <https://esysc.github.io/grid-app/>
@@ -886,10 +864,10 @@ mosquitto_sub -h localhost -t "grid/sensors/#"
 
 ### Getting Help
 
-- Check [Project Context](instructions/PROJECT_CONTEXT.md) for detailed info
 - Review GitHub Issues for similar problems
 - Check application logs: `docker-compose logs`
-- Read API documentation: <http://localhost:8000/docs>
+- Read API documentation at <http://localhost:8000/docs> (start backend first)
+- Check [Electrical Metrics Reference](ELECTRICAL_METRICS_REFERENCE.md) for grid terminology
 
 ## 📝 Version History
 
