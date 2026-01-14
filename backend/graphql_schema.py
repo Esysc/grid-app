@@ -450,13 +450,14 @@ class Mutation:
         db: AsyncSession = info.context["db"]
         try:
             db_fault = FaultEventDB(
-                event_id=event.event_id,
+                sensor_id=event.event_id,  # Use event_id as sensor identifier
                 severity=event.severity,
                 fault_type=event.event_type,
                 location=event.location,
                 timestamp=event.timestamp,
                 duration_ms=event.duration_ms,
                 resolved=False,
+                description=f"{event.event_type} fault at {event.location}",
             )
             db.add(db_fault)
             await db.commit()
