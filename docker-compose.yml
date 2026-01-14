@@ -3,7 +3,7 @@
 services:
   # TimescaleDB for time-series data
   timescaledb:
-    image: timescale/timescaledb:latest-pg15
+    image: timescale/timescaledb:latest-pg15@sha256:e791cd77cfa269f47e1903a9b5276858aee1b6c802ca85f68a879686148d47a9
     container_name: grid-timescaledb
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-griduser}
@@ -64,7 +64,7 @@ services:
 
   # pgAdmin for database management
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:latest@sha256:50700ac17936d0227f9e3e4bb086a91efb67064debc4b4737c35545bf1564088
     container_name: grid-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@grid-monitor.com}
@@ -81,7 +81,7 @@ services:
 
   # LocalStack for AWS services (S3, etc.)
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:latest@sha256:ab3994e32598a728efae405b6ac2fea4e18b52dcb3ea96c836b2f57858cc0cad
     container_name: grid-localstack
     environment:
       SERVICES: s3
@@ -108,7 +108,7 @@ services:
 
   # MQTT Broker for sensor simulation
   mqtt:
-    image: eclipse-mosquitto:2.0
+    image: eclipse-mosquitto:2.0@sha256:077fe4ff4c49df1e860c98335c77dda08360629e0e2a718147027e4db3eace9d
     container_name: grid-mqtt
     ports:
       - "1883:1883"
