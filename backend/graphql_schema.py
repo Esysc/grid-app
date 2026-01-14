@@ -8,12 +8,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncGenerator, List, Optional, cast
 
 import strawberry
-from database import FaultEventDB, PowerQualityDB, VoltageReadingDB
 from sqlalchemy import Float, Select
 from sqlalchemy import func as sa_func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from strawberry.types import Info
+
+from database import FaultEventDB, PowerQualityDB, VoltageReadingDB
 
 
 @strawberry.type
