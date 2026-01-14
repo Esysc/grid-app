@@ -59,9 +59,11 @@ export const SENSOR_STATS_QUERY = `
     sensorStats {
       totalSensors
       activeSensors
+      offlineSensors
       faultCount24h
       violationCount24h
       avgVoltage
+      avgPowerFactor
       minVoltage
       maxVoltage
     }

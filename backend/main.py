@@ -489,7 +489,7 @@ async def get_fault_timeline(
     return [FaultEvent.model_validate(f) for f in faults]
 
 
-@app.get("/stats", response_model=SensorStats, tags=["Analytics"])
+@app.get("/sensors/stats", response_model=SensorStats, tags=["Analytics"])
 async def get_sensor_stats(
     db: AsyncSession = Depends(get_db),
     _current_user: User = Depends(get_current_user),

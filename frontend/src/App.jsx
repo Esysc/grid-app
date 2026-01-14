@@ -8,6 +8,7 @@ import ExportMenu from './components/ExportMenu';
 import Archives from './components/Archives';
 import DemoBanner from './components/DemoBanner';
 import DemoDataButton from './components/DemoDataButton';
+import NetworkLogs from './components/NetworkLogs';
 import { DataFetcher } from './api/dataFetcher';
 import { useApiToggle } from './hooks/useApiToggle';
 
@@ -26,6 +27,8 @@ function App() {
   const [stats, setStats] = useState({ total_sensors: 0, total_faults_24h: 0, violations: 0 });
   const [accessToken, setAccessToken] = useState(null);
   const [view, setView] = useState('dashboard');
+  const [networkLogs, setNetworkLogs] = useState([]);
+  const [logsExpanded, setLogsExpanded] = useState(false);
   const pollingRef = useRef(null);
   const eventSourceRef = useRef(null);
   const dataFetcherRef = useRef(null);
@@ -61,6 +64,7 @@ function App() {
   useEffect(() => {
     if (dataFetcherRef.current && accessToken && !DEMO) {
       dataFetcherRef.current.setMode(useGraphQL);
+      setNetworkLogs([]); // Clear logs when switching modes
       // Refetch all data with new API mode
       fetchVoltage();
       fetchPowerQuality();
@@ -161,7 +165,10 @@ function App() {
     }
 
     // Initialize DataFetcher with current token and API mode
-    dataFetcherRef.current = new DataFetcher(token, useGraphQL);
+    const handleNetworkLog = (log) => {
+      setNetworkLogs((prev) => [...prev, log].slice(-100)); // Keep last 100 logs
+    };
+    dataFetcherRef.current = new DataFetcher(token, useGraphQL, handleNetworkLog);
 
     fetchFaults();
     fetchPowerQuality();
@@ -350,21 +357,17 @@ function App() {
             </button>
           </nav>
           <div className="api-toggle">
-            <span className="api-mode-label">API Mode:</span>
-            <button 
-              onClick={() => !useGraphQL && toggleApi()} 
-              className={`toggle-btn ${!useGraphQL ? 'active' : ''}`}
-              title="REST API"
-            >
-              REST
-            </button>
-            <button 
-              onClick={() => useGraphQL && toggleApi()} 
-              className={`toggle-btn ${useGraphQL ? 'active' : ''}`}
-              title="GraphQL API"
-            >
-              GraphQL
-            </button>
+            <span className="api-mode-label">REST</span>
+            <label className="toggle-switch">
+              <input 
+                type="checkbox" 
+                checked={useGraphQL} 
+                onChange={toggleApi}
+                aria-label="Toggle between REST and GraphQL API"
+              />
+              <span className="slider"></span>
+            </label>
+            <span className="api-mode-label">GraphQL</span>
           </div>
           {!DEMO && isAuthenticated && <DemoDataButton token={accessToken} />}
           <ExportMenu token={accessToken} onViewArchives={() => setView('archives')} onTokenExpired={handleTokenExpired} />
@@ -375,7 +378,7 @@ function App() {
       {view === 'dashboard' && (
         <>
           <GridStats stats={stats} sensorStatus={sensorStatus} />
-          <GridTopology sensorStatus={sensorStatus} voltageData={voltageData} />
+          <GridTopology sensorStatus={sensorStatus} voltageData={voltageData} powerQuality={powerQuality} />
         <div className="dashboard-grid">
           <div className="chart-container">
             <h2>⚡ Voltage Monitoring</h2>
@@ -449,6 +452,14 @@ function App() {
       <footer className="App-footer">
         <p>Grid Monitor - Real-time Grid Analytics</p>
       </footer>
+
+      {!DEMO && (
+        <NetworkLogs 
+          logs={networkLogs} 
+          isExpanded={logsExpanded}
+          onToggle={() => setLogsExpanded(!logsExpanded)}
+        />
+      )}
     </div>
   );
 }

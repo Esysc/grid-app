@@ -67,9 +67,11 @@ class SensorStats:
 
     total_sensors: int
     active_sensors: int
+    offline_sensors: int
     fault_count_24h: int
     violation_count_24h: int
     avg_voltage: float
+    avg_power_factor: float
     min_voltage: float
     max_voltage: float
 
@@ -353,6 +355,16 @@ class Query:
         min_voltage = float(voltage_row[1]) if voltage_row[1] is not None else 0.0
         max_voltage = float(voltage_row[2]) if voltage_row[2] is not None else 0.0
 
+        # Get average power factor
+        pf_query: Select[tuple[float | None]] = select(
+            sa_func.avg(PowerQualityDB.power_factor).cast(Float)
+        ).where(PowerQualityDB.timestamp >= fault_cutoff)
+        pf_result = await db.execute(pf_query)
+        avg_power_factor = float(pf_result.scalar() or 0.95)
+
+        # Calculate offline sensors
+        offline_sensors = total_sensors - active_sensors
+
         # Count voltage violations (last 24h)
         violation_query = select(
             sa_func.count(VoltageReadingDB.id)  # pylint: disable=not-callable
@@ -366,9 +378,11 @@ class Query:
         return SensorStats(  # type: ignore[call-arg]
             total_sensors=total_sensors,
             active_sensors=active_sensors,
+            offline_sensors=offline_sensors,
             fault_count_24h=fault_count_24h,
             violation_count_24h=violation_count_24h,
             avg_voltage=avg_voltage,
+            avg_power_factor=avg_power_factor,
             min_voltage=min_voltage,
             max_voltage=max_voltage,
         )
