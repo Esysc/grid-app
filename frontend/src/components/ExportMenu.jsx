@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ExportMenu.css';
 
-const ExportMenu = ({ token, onViewArchives }) => {
+const ExportMenu = ({ token, onViewArchives, onTokenExpired }) => {
   const isPages =
     typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
   const DEMO =
@@ -61,6 +61,10 @@ const ExportMenu = ({ token, onViewArchives }) => {
           Authorization: `Bearer ${token}`,
         },
       });
+      if (response.status === 401) {
+        onTokenExpired?.();
+        return;
+      }
       const result = await response.json();
       if (!response.ok || result.status === 'error') {
         const detail = result.message || response.statusText;

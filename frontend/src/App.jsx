@@ -187,11 +187,29 @@ function App() {
     });
   };
 
+  // Handle token expiration - redirect to login
+  const handleTokenExpired = () => {
+    console.warn('Token expired, redirecting to login');
+    localStorage.removeItem('accessToken');
+    setAccessToken(null);
+    setIsAuthenticated(false);
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+  };
+
   const fetchFaults = async (token) => {
     try {
       const response = await fetch('/api/faults/recent', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        handleTokenExpired();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setRecentFaults(data);
@@ -206,6 +224,10 @@ function App() {
       const response = await fetch('/api/sensors/power-quality?limit=20', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        handleTokenExpired();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setPowerQuality(data);
@@ -220,6 +242,10 @@ function App() {
       const response = await fetch('/api/sensors/voltage?limit=30', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        handleTokenExpired();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setVoltageData(data);
@@ -234,6 +260,10 @@ function App() {
       const response = await fetch('/api/stats', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        handleTokenExpired();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -248,6 +278,10 @@ function App() {
       const response = await fetch('/api/sensors/status', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
+      if (response.status === 401) {
+        handleTokenExpired();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setSensorStatus(data);
@@ -326,7 +360,7 @@ function App() {
             </button>
           </nav>
           {!DEMO && isAuthenticated && <DemoDataButton token={accessToken} />}
-          <ExportMenu token={accessToken} onViewArchives={() => setView('archives')} />
+          <ExportMenu token={accessToken} onViewArchives={() => setView('archives')} onTokenExpired={handleTokenExpired} />
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </header>
