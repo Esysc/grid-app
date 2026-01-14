@@ -136,15 +136,15 @@
       "matchUpdateTypes": [
         "patch"
       ],
-      "matchPackagePatterns": [
-        "*"
-      ],
       "vulnerabilityAlerts": {
         "labels": [
           "security"
         ],
         "automerge": true
-      }
+      },
+      "matchPackageNames": [
+        "*"
+      ]
     }
   ],
   "vulnerabilityAlerts": {
