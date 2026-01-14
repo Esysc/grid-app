@@ -1,5 +1,5 @@
 # Build stage
-FROM node:24-alpine@sha256:266f8dae214bb44a1caefb9ca4c79e0a6dd363ed9d807b82222efa0e53e5288a AS build
+FROM node:24-alpine@sha256:6ad8c47f099bc2440e0fc42f17a03297fa79955f559f10087cabf377c43ddbce AS build
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ ENV VITE_BASE_URL=/
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine
+FROM nginx:alpine@sha256:b0f7830b6bfaa1258f45d94c240ab668ced1b3651c8a222aefe6683447c7bf55
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
